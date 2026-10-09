@@ -2,7 +2,7 @@
 
 [![Лицензия: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Fengze233.dsh-vscode-panel?label=Marketplace&color=4D6BFE)](https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel)
-[![Звёзды GitHub](https://img.shields.io/github/stars/Fengze233/dsh-vscode?style=social)](https://github.com/Fengze233/dsh-vscode)
+[![Звёзды GitHub](https://img.shields.io/github/stars/tonulls/dsh-vscode?style=social)](https://github.com/tonulls/dsh-vscode)
 [![Плагин DSH](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.91-blue)](https://code.visualstudio.com/)
 
@@ -54,14 +54,14 @@ code --install-extension Fengze233.dsh-vscode-panel
 
 **Вариант 2: пакет .vsix**
 
-1. Скачайте последнюю версию `dsh-vscode.vsix` со страницы [Releases](https://github.com/Fengze233/dsh-vscode/releases).
+1. Скачайте последнюю версию `dsh-vscode.vsix` со страницы [Releases](https://github.com/tonulls/dsh-vscode/releases).
 2. В VS Code нажмите `Ctrl+Shift+P` → выполните `Extensions: Install from VSIX...` → выберите файл.
 3. Перезагрузите окно командой `Developer: Reload Window`.
 
 **Вариант 3: сборка из исходного кода**
 
 ```bash
-git clone https://github.com/Fengze233/dsh-vscode.git
+git clone https://github.com/tonulls/dsh-vscode.git
 cd dsh-vscode
 npm install
 npm run package        # создаёт dsh-vscode.vsix; установите его способом 2
@@ -222,7 +222,7 @@ src/
 - Резервная отправка изображений требует открытой рабочей области и сохраняет временные файлы в её корне. Предыдущие файлы удаляются при следующей отправке; если новых сообщений нет — примерно через две минуты. Очистка также происходит при переключении/закрытии беседы, закрытии панели, выгрузке страницы и остановке расширения (best effort). При запуске удаляются оставшиеся файлы `dsh-imgcache-*`; командой `DSH: Clean Up Image Cache` их можно удалить вручную.
 - Для проверки версии bridge в консоли DevTools панели ищите `[dsh-vscode-bridge] handshake ok` с номером версии и `imageFallback=true`. После отправки изображения появится сообщение о преобразовании. При устаревшей версии перезапустите сервис DSH; установщик переустанавливает bridge при несовпадении версии или содержимого `client.js`.
 - Для вручную запущенного DSH ≥0.1.2 расширение не может прочитать журнал другого процесса: при первом входе необходимо вставить ссылку запуска. См. раздел авторизации.
-- Узкий курсор в CJK-тексте при ширине панели около 300–400 px — проблема редактора DSH, зарегистрированная в [issue #9](https://github.com/Fengze233/dsh-vscode/issues/9); расширение не изменяет код страницы DSH.
+- Узкий курсор в CJK-тексте при ширине панели около 300–400 px — проблема редактора DSH, зарегистрированная в [issue #9](https://github.com/tonulls/dsh-vscode/issues/9); расширение не изменяет код страницы DSH.
 - По умолчанию `dsh web` получает `--no-open`; аргументы `dsh.extraArgs` или `dsh.openInBrowser` могут изменить это поведение.
 
 ## 🌐 Сообщество
@@ -230,7 +230,7 @@ src/
 Это community-плагин DeepSeek Harness (тема [`dsh-plugin`](https://github.com/topics/dsh-plugin)).
 
 - Официальный репозиторий DSH: <https://github.com/deepseek-ai/deepseek-harness>
-- Сообщить об ошибке: <https://github.com/Fengze233/dsh-vscode/issues>
+- Сообщить об ошибке: <https://github.com/tonulls/dsh-vscode/issues>
 - Обсуждения DSH: <https://github.com/deepseek-ai/deepseek-harness/discussions>
 
 ## 🙏 Участники и благодарности

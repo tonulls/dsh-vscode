@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Fengze233.dsh-vscode-panel?label=Marketplace&color=4D6BFE)](https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel)
-[![GitHub stars](https://img.shields.io/github/stars/Fengze233/dsh-vscode?style=social)](https://github.com/Fengze233/dsh-vscode)
+[![GitHub stars](https://img.shields.io/github/stars/tonulls/dsh-vscode?style=social)](https://github.com/tonulls/dsh-vscode)
 [![DSH Plugin](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.91-blue)](https://code.visualstudio.com/)
 
@@ -54,14 +54,14 @@ Marketplace page: <https://marketplace.visualstudio.com/items?itemName=Fengze233
 
 **Option 2: .vsix package**
 
-1. Download the latest `dsh-vscode.vsix` from [Releases](https://github.com/Fengze233/dsh-vscode/releases);
+1. Download the latest `dsh-vscode.vsix` from [Releases](https://github.com/tonulls/dsh-vscode/releases);
 2. In VS Code press `Ctrl+Shift+P` → run `Extensions: Install from VSIX...` → select the file;
 3. Reload the window (`Developer: Reload Window`).
 
 **Option 3: Build from source**
 
 ```bash
-git clone https://github.com/Fengze233/dsh-vscode.git
+git clone https://github.com/tonulls/dsh-vscode.git
 cd dsh-vscode
 npm install
 npm run package        # produces dsh-vscode.vsix, then install as in Option 2
@@ -231,7 +231,7 @@ src/
 - Image fallback caches the image files under the **workspace root** — **an open workspace folder is required** (with no folder open, images cannot be cached and no fallback happens). **Temp images are deleted as soon as the model has seen them**: the previous batch is removed the moment the next message is sent in the same session (the model already read it and answered); if no further message comes, a ~2-minute TTL auto-deletes them; conversation create/switch/delete, panel close, page unload and extension deactivate also clean up (best-effort). On activation the extension additionally sweeps any orphaned `dsh-imgcache-*` files left by an earlier session (VS Code restarts lose the in-memory registry), and you can always run the **`DSH: Clean Up Image Cache`** command to purge them manually.
 - **Verifying the bridge was updated**: in the DSH panel DevTools console you should see `[dsh-vscode-bridge] handshake ok, **v0.4.0**, imageFallback=true` and, after sending an image, `image fallback: 已把图片改为地址随消息重发（N 张）: …`. If it still shows an older version, the bridge was not reinstalled — restart the DSH service (the vsix ships bridge `0.4.0`; the installer force-reinstalls on version mismatch **or on a `client.js` content difference**, so same-version repackaging also refreshes it).
 - **Externally started DSH (≥ 0.1.2)**: the extension cannot read another process's log, so the first sign-in needs one paste of the launch URL (then 30 days, no repeats) — see [DSH ≥0.1.2 authentication](#-dsh-012-authentication--the-local-relay).
-- **Narrow-viewport CJK caret (upstream)**: in a ~300–400px wide panel the text caret can land inside the last CJK character. This is a DSH web-frontend issue (tracked as [issue #9](https://github.com/Fengze233/dsh-vscode/issues/9)); the composer was rewritten upstream in 0.1.2, and this extension cannot patch DSH's page code — the investigation is documented in that issue.
+- **Narrow-viewport CJK caret (upstream)**: in a ~300–400px wide panel the text caret can land inside the last CJK character. This is a DSH web-frontend issue (tracked as [issue #9](https://github.com/tonulls/dsh-vscode/issues/9)); the composer was rewritten upstream in 0.1.2, and this extension cannot patch DSH's page code — the investigation is documented in that issue.
 - `--no-open` is passed to `dsh web` by default, unless `dsh.extraArgs` or `dsh.openInBrowser` explicitly opts back in to opening the browser.
 
 ## 🌐 Community
@@ -239,7 +239,7 @@ src/
 This is a DeepSeek Harness community plugin (topic: [`dsh-plugin`](https://github.com/topics/dsh-plugin)).
 
 - DSH official repo: <https://github.com/deepseek-ai/deepseek-harness>
-- Issue tracker: <https://github.com/Fengze233/dsh-vscode/issues>
+- Issue tracker: <https://github.com/tonulls/dsh-vscode/issues>
 - DSH community discussions: <https://github.com/deepseek-ai/deepseek-harness/discussions>
 
 ## 🙏 Contributors & Acknowledgements
@@ -274,4 +274,4 @@ Many improvements here came from the community. Contributions are grouped by typ
 
 ## 📄 License
 
-[MIT](./LICENSE) © 2026 Fengze233
+[MIT](../LICENSE) © 2026 Fengze233

@@ -11,11 +11,16 @@ set -euo pipefail
 
 BRANCH="feat/v0.4.2-revert-pr11"
 RELEASE_VERSION="0.4.2"
-WIN_DESKTOP="/mnt/c/Users/ni125/Desktop"
-GIT_ID=(-c user.name=Fengze233 -c user.email=ni125803@163.com)
+WIN_DESKTOP="${WIN_DESKTOP:-}"
+# Используются автор и email из локальной конфигурации Git; не храните личный email в скрипте.
 
 # 进入脚本所在仓库（worktree）根目录
 cd "$(git rev-parse --show-toplevel)"
+
+if [[ -z "$WIN_DESKTOP" || ! -d "$WIN_DESKTOP" ]]; then
+  echo "✗ 请设置 WIN_DESKTOP 为可用的 Windows 桌面目录" >&2
+  exit 1
+fi
 
 current_branch="$(git branch --show-current)"
 if [ "$current_branch" != "$BRANCH" ]; then
@@ -54,7 +59,7 @@ if (!ok) process.exit(1);
 
 echo "=== 2/7 提交并推送 ==="
 git add -A
-git "${GIT_ID[@]}" commit -q -m "chore(release): v$RELEASE_VERSION 正式版——撤回 PR #11 后的定版"
+git commit -q -m "chore(release): v$RELEASE_VERSION 正式版——撤回 PR #11 后的定版"
 git push -q origin "$BRANCH"
 
 echo "=== 3/7 本地验收（typecheck + 全量测试） ==="

@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Fengze233.dsh-vscode-panel?label=Marketplace&color=4D6BFE)](https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel)
-[![GitHub stars](https://img.shields.io/github/stars/Fengze233/dsh-vscode?style=social)](https://github.com/Fengze233/dsh-vscode)
+[![GitHub stars](https://img.shields.io/github/stars/tonulls/dsh-vscode?style=social)](https://github.com/tonulls/dsh-vscode)
 [![DSH 社区插件](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.91-blue)](https://code.visualstudio.com/)
 
@@ -54,14 +54,14 @@ code --install-extension Fengze233.dsh-vscode-panel
 
 **方式二：下载 .vsix 安装包**
 
-1. 前往 [Releases](https://github.com/Fengze233/dsh-vscode/releases) 下载最新 `dsh-vscode.vsix`；
+1. 前往 [Releases](https://github.com/tonulls/dsh-vscode/releases) 下载最新 `dsh-vscode.vsix`；
 2. VS Code 中按 `Ctrl+Shift+P` → 执行 `Extensions: Install from VSIX...` → 选择下载的文件；
 3. 重载窗口（`Developer: Reload Window`）。
 
 **方式三：从源码构建**
 
 ```bash
-git clone https://github.com/Fengze233/dsh-vscode.git
+git clone https://github.com/tonulls/dsh-vscode.git
 cd dsh-vscode
 npm install
 npm run package        # 产出 dsh-vscode.vsix，再按方式二安装
@@ -256,7 +256,7 @@ src/
 - 图片降级：缓存文件放在**工作区根目录**——**需先打开一个工作区文件夹**（未打开文件夹时无法落盘缓存，也就不做降级）。**临时图“模型看完即删”**：同会话发出下一条消息时立即删除上一批（模型已读完并回答）；若不再发消息，约 2 分钟后自动删除兜底；会话新建/删除/切换、面板关闭/页面卸载与扩展停用也都会清理（尽力而为）。扩展激活时会自动扫描清理上次会话遗留的 `dsh-imgcache-*` 孤儿；也可随时运行命令 **`DSH: 清理图片缓存`** 一键清除。
 - **复测如何确认桥接已更新**：在 DSH 面板 DevTools（开发者工具）Console 中应看到 `[dsh-vscode-bridge] handshake ok, **v0.4.0**, imageFallback=true` 与传图发送后的 `image fallback: 已把图片改为地址随消息重发（N 张）: …` 日志；若仍显示旧版本，说明旧桥接未重装——请重启 DSH 服务（vsix 随附桥接版本 `0.4.0`，安装器在版本不一致**或 `client.js` 内容不一致**时都会强制重装，同版本重新打包同样会刷新）。
 - **外部启动的 DSH（≥ 0.1.2）**：扩展读不到其它进程的日志，首次登录需要粘贴一次启动网址（之后 30 天无需重复）——见 [DSH ≥0.1.2 鉴权与本地代办](#-dsh-012-鉴权与本地代办)。
-- **窄视口中文光标（上游问题）**：面板宽度约 300–400px 时，光标可能落在最后一个中文字符中间。这是 DSH 网页前端的问题（记录于 [issue #9](https://github.com/Fengze233/dsh-vscode/issues/9)）；0.1.2 起上游已重写输入框组件，且本扩展无法修改 DSH 页面内部代码——调查结论见该 issue。
+- **窄视口中文光标（上游问题）**：面板宽度约 300–400px 时，光标可能落在最后一个中文字符中间。这是 DSH 网页前端的问题（记录于 [issue #9](https://github.com/tonulls/dsh-vscode/issues/9)）；0.1.2 起上游已重写输入框组件，且本扩展无法修改 DSH 页面内部代码——调查结论见该 issue。
 - `--no-open` 默认传给 `dsh web`；若在 `dsh.extraArgs` 或 `dsh.openInBrowser` 显式选择弹浏览器，则按你的选择执行。
 
 ## 🌐 社区
@@ -264,7 +264,7 @@ src/
 本项目是 DeepSeek Harness 社区插件（话题：[`dsh-plugin`](https://github.com/topics/dsh-plugin)）。
 
 - DSH 官方仓库：<https://github.com/deepseek-ai/deepseek-harness>
-- 问题反馈：<https://github.com/Fengze233/dsh-vscode/issues>
+- 问题反馈：<https://github.com/tonulls/dsh-vscode/issues>
 - DSH 社区讨论：<https://github.com/deepseek-ai/deepseek-harness/discussions>
 
 ## 🙏 贡献者与致谢
@@ -299,4 +299,4 @@ src/
 
 ## 📄 License
 
-[MIT](./LICENSE) © 2026 Fengze233
+[MIT](../LICENSE) © 2026 Fengze233

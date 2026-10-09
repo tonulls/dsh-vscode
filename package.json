@@ -354,10 +354,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Fengze233/dsh-vscode.git"
+    "url": "git+https://github.com/tonulls/dsh-vscode.git"
   },
-  "homepage": "https://github.com/Fengze233/dsh-vscode#readme",
+  "homepage": "https://github.com/tonulls/dsh-vscode#readme",
   "bugs": {
-    "url": "https://github.com/Fengze233/dsh-vscode/issues"
+    "url": "https://github.com/tonulls/dsh-vscode/issues"
   }
 }

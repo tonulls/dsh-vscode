@@ -155,7 +155,7 @@
 
 - 开发在独立分支 v0.3.0 进行，随时推送到 GitHub（仅 GitHub 走代理 127.0.0.1:11888，
   不配全局代理）；origin/main 保持干净，v0.3.0 验收通过后再合并/发版。
-- 交互/提交信息全部中文；提交身份 Fengze233 <ni125803@163.com>。
+- 交互/提交信息全部中文；提交身份使用本地 Git 配置，email 使用 GitHub noreply 地址。
 - 发布流程保持与 v0.2.x 一致：npm run package 产出 dsh-vscode.vsix →
   vsce publish 上传插件市场，用户仍可一键下载安装（补充要求 #5）。
 - 更新 README（中英）、CHANGELOG、package.nls.* 本地化。

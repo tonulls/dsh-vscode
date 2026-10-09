@@ -10,14 +10,14 @@
 
 ## Global Constraints
 
-- 代码注释必须为完整中文；git 提交信息为中文；提交身份 `Fengze233` / `your-email@example.com`。
+- 代码注释和 git 提交信息使用中文；提交身份由本地 Git 配置提供，email 使用 GitHub noreply 地址。
 - i18n 规则：VS Code 语言以 `zh-` 开头 → 简体中文，其余一律英文（动态文案走 `src/i18n.ts`，静态文案走 `package.nls.json` / `package.nls.zh-cn.json`）。
 - 全平台代码兼容（Windows 本地 / WSL / macOS / Linux）：路径一律 `node:path`，命令名按平台 `dsh` / `dsh.cmd`（沿用 `src/service/process.ts` 模式）。
 - 绝不写 DSH 安装目录；只允许写用户目录 `$DSH_HOME`（默认 `~/.dsh`）下 `profiles/web/`。
 - 桥接失败必须优雅降级：面板、服务管理、状态栏、占位页、"在浏览器打开"按钮全部照常；仅外链跳转、文件跳转、自动切工作区三类功能不可用。
 - 测试后清理残留进程与测试期对 `cordis.patch.yml` 的改动，恢复测试前状态。
 - 测试运行方式：`npm test`（build.mjs --test 构建全部 test/*.test.ts → `node --test "out/test/**/*.test.js"`）。
-- VS Code engines 保持 `^1.91.0`；扩展名/publisher 不变（`dsh-vscode-panel` / `Fengze233`）。
+- VS Code engines 保持 `^1.91.0`；扩展名/publisher 按当前 Marketplace 发布身份保留（`dsh-vscode-panel` / `Fengze233`），除非完成 Marketplace 发布者迁移.
 
 ---
 
