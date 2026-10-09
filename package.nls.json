@@ -21,7 +21,7 @@
   "dsh.config.bridgeEnabled": "Enable the DSH page bridge (external links and file jumps between the panel and DSH).",
   "dsh.config.workspaceRootIndex": "Which workspace root to use as the working directory for the auto-started `dsh web` (0-based; falls back to the first root when out of range).",
   "dsh.config.bridgeSilenceWarning": "Suppress bridge warnings (e.g. when a DSH page is open outside the panel).",
-  "dsh.config.executablePath": "Absolute path to the dsh executable (dsh.cmd on Windows). Empty = look up on PATH.",
+  "dsh.config.executablePath": "Absolute path to the dsh executable (dsh.cmd or bin.js on Windows). Empty = look up on PATH; also auto-detects DSH Desktop in its standard Windows install directory.",
   "dsh.config.openInBrowser": "Open the DSH page in the default browser after the service starts (when off, `--no-open` is passed to `dsh web`).",
   "dsh.config.remoteEnabled": "Enable remote scenarios (SSH Remote / WSL / Dev Containers / Codespaces): run dsh on the remote host and open the panel through a VS Code tunnel. Off by default; when off, remote windows show a guide instead of starting a remote service. Requires `dsh` installed on the remote and a window reload after enabling.",
   "dsh.config.imageFallback": "When the active model does not support image input, automatically send attached images as file-path references instead of failing (files are cached in the session working directory and removed when the conversation ends).",

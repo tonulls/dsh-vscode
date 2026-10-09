@@ -177,7 +177,7 @@ if (iframeEl) {
     }
     // 打开外链：转发给扩展 → vscode.env.openExternal
     if (d && d.kind === 'openExternal' && typeof d.url === 'string') { vscode.postMessage({ type: 'bridgeOpenExternal', url: d.url }); return; }
-    // 打开文件：转发给扩展 → showTextDocument（携带可选 cwd）
+    // 打开文件：转发给扩展 → VS Code 按资源类型选择编辑器（携带可选 cwd）
     if (d && d.kind === 'openFile' && typeof d.path === 'string') {
       vscode.postMessage({ type: 'bridgeOpenFile', path: d.path, cwd: typeof d.cwd === 'string' ? d.cwd : undefined });
       return;

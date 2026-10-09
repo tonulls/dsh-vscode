@@ -1,7 +1,7 @@
 // src/bridge/host.ts — 桥接消息处理：外链打开 / 文件跳转
 // 职责：把 webview 顶层转发来的桥接消息（bridgeOpenExternal / bridgeOpenFile）落地为
 // VS Code 动作（打开外部浏览器 / 打开文本文档），并做协议白名单与路径解析的纵深防御。
-// 依赖注入设计：生产侧接 vscode API（openExternal / showTextDocument），测试侧注入假实现，
+// 依赖注入设计：生产侧接 vscode API（openExternal / vscode.open），测试侧注入假实现，
 // 保证纯逻辑可被 node:test 直接验证。
 import { isAbsolute, resolve, join, basename } from 'node:path';
 import type { PanelMessage } from '../panel/html';
@@ -155,8 +155,8 @@ export async function cleanupStaleImageCaches(
 export interface BridgeMessageDeps {
   /** 打开外部链接（生产接 vscode.env.openExternal，返回是否成功） */
   openExternal(url: string): Thenable<boolean>;
-  /** 打开文本文档（生产接 vscode.window.showTextDocument） */
-  openTextDocument(path: string): Thenable<void>;
+  /** 按资源类型调用 VS Code 默认编辑器选择器（生产接 vscode.open） */
+  openFile(path: string): Thenable<void>;
   /** 弹用户可见提示（生产接 vscode.window.showWarningMessage，测试注入假实现以断言） */
   showWarning(msg: string): void;
   /** 工作区根目录（相对路径解析的兜底基准，生产由扩展入口注入） */
@@ -220,7 +220,7 @@ export async function handleBridgeMessage(msg: PanelMessage, deps: BridgeMessage
     if (r.kind === 'abs') {
       try {
         // 打开文档可能因文件不存在/无权限等失败，捕获后给用户可见反馈而非未处理拒绝
-        await deps.openTextDocument(r.path);
+        await deps.openFile(r.path);
       } catch (err) {
         // 文案内联固定提示（本模块纯逻辑，直接断言，与 Task 7 的 i18n 无关）
         deps.showWarning(`无法打开文件：${r.path}（${errSummary(err)}）`);

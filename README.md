@@ -169,7 +169,7 @@ Bridge действует только во встроенной панели. �
 | `dsh.autoStart` | `true` | Запускать сервис, если он ещё не работает |
 | `dsh.stopOnExit` | `true` | Останавливать запущенный расширением сервис при закрытии последнего окна |
 | `dsh.extraArgs` | `[]` | Дополнительные аргументы для `dsh web` |
-| `dsh.executablePath` | `""` | Путь к исполняемому файлу `dsh` (`dsh.cmd` в Windows); пустое значение — поиск в PATH |
+| `dsh.executablePath` | `""` | Путь к `dsh` (`dsh.cmd` или `bin.js` в Windows); пустое значение — поиск в PATH и автообнаружение DSH Desktop в стандартной папке установки |
 | `dsh.openInBrowser` | `false` | Открывать DSH в браузере после запуска; при выключении передаётся `--no-open` |
 | `dsh.remote.enabled` | `false` | Включить SSH Remote, WSL, Dev Containers и Codespaces; после изменения требуется перезагрузка окна |
 | `dsh.image.fallback` | `true` | Отправлять изображения как ссылки на файлы, если активная модель не поддерживает зрение |
@@ -188,7 +188,7 @@ Bridge действует только во встроенной панели. �
 
 ```bash
 npm install
-npm run test          # 284 модульных/интеграционных теста, включая реальные сценарии dsh web
+npm run test          # 293 модульных/интеграционных теста, включая реальные сценарии dsh web
 npm run compile       # собирает out/extension.js
 npm run watch         # сборка при изменениях
 npm run typecheck     # проверка типов
@@ -247,6 +247,10 @@ src/
 
 | Автор | Сообщение | Ссылка |
 |---|---|---|
+| [@Joshuayang228](https://github.com/Joshuayang228) | Клики по относительному пути не учитывали cwd DSH-сессии | #32 |
+| [@Joshuayang228](https://github.com/Joshuayang228) | Бинарные файлы открывались как текст вместо выбора редактора VS Code | #33 |
+| [@sellfishining](https://github.com/sellfishining) | Не находился установленный DSH Desktop при пустом PATH | #31 |
+| [@MFWT](https://github.com/MFWT) | DSH Desktop shim ошибочно трактовался как npm `bin.js` | #30 |
 | [@AAAwoshi](https://github.com/AAAwoshi) | Перезагрузка панели при переключении редактора: выявлена лишняя перерисовка и смена nonce, представлены измерения и исправление | #27 |
 | [@Joshuayang228](https://github.com/Joshuayang228) | Переходы по файлам не открывали редактор: найдена причина в хешированном CSS-классе и предложено исправление | #22 |
 | [@lizhuoyuan41-droid](https://github.com/lizhuoyuan41-droid) | Bridge попадал во внутренний каталог команд DSH Desktop и мешал запуску; предложен allow-list | #20 |

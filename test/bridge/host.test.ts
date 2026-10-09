@@ -24,7 +24,7 @@ test('handleBridgeMessage 转发 openExternal 到外部浏览器', async () => {
   const calls: string[] = [];
   await handleBridgeMessage({ type: 'bridgeOpenExternal', url: 'https://a.b' }, {
     openExternal: async (u) => { calls.push(u); return true; },
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: () => {},
   });
   assert.deepEqual(calls, ['https://a.b']);
@@ -35,7 +35,7 @@ test('handleBridgeMessage 拒绝危险协议的 openExternal', async () => {
   let called = false;
   await handleBridgeMessage({ type: 'bridgeOpenExternal', url: 'javascript:alert(1)' }, {
     openExternal: async () => { called = true; return true; },
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: () => {},
   });
   assert.equal(called, false);
@@ -46,7 +46,7 @@ test('handleBridgeMessage openExternal 抛错时提示用户', async () => {
   const warnings: string[] = [];
   await handleBridgeMessage({ type: 'bridgeOpenExternal', url: 'https://a.b/c' }, {
     openExternal: async () => { throw new Error('no default browser'); },
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: (m) => { warnings.push(m); },
   });
   assert.equal(warnings.length, 1);
@@ -54,24 +54,23 @@ test('handleBridgeMessage openExternal 抛错时提示用户', async () => {
   assert.ok(warnings[0].includes('no default browser'), `提示应含错误摘要，实际：${warnings[0]}`);
 });
 
-test('handleBridgeMessage openFile 调用打开文档', async () => {
-  // 相对路径 + cwd → 解析为绝对路径后交给 openTextDocument
+test('handleBridgeMessage openFile 优先按会话 cwd 解析，不按 VS Code 工作区根', async () => {
   const opened: string[] = [];
-  await handleBridgeMessage({ type: 'bridgeOpenFile', path: 'src/main.ts', cwd: '/proj' }, {
+  await handleBridgeMessage({ type: 'bridgeOpenFile', path: '_pasted_image.png', cwd: '/session/cwd' }, {
     openExternal: async () => true,
-    openTextDocument: async (p) => { opened.push(p); },
+    openFile: async (p) => { opened.push(p); },
     showWarning: () => {},
-    workspaceRoot: '/proj',
+    workspaceRoot: '/workspace/root',
   });
-  assert.deepEqual(opened, ['/proj/src/main.ts']);
+  assert.deepEqual(opened, ['/session/cwd/_pasted_image.png']);
 });
 
 test('handleBridgeMessage openFile 打开失败时提示用户', async () => {
-  // 假 openTextDocument 抛错 → 应调用 showWarning，文案含解析后的路径与错误摘要，且不抛未处理异常
+  // 假 openFile 抛错 → 应调用 showWarning，文案含解析后的路径与错误摘要，且不抛未处理异常
   const warnings: string[] = [];
   await handleBridgeMessage({ type: 'bridgeOpenFile', path: 'missing.ts', cwd: '/proj' }, {
     openExternal: async () => true,
-    openTextDocument: async () => { throw new Error('ENOENT: no such file'); },
+    openFile: async () => { throw new Error('ENOENT: no such file'); },
     showWarning: (m) => { warnings.push(m); },
     workspaceRoot: '/proj',
   });
@@ -85,7 +84,7 @@ test('handleBridgeMessage openFile 路径无法解析时提示用户', async () 
   const warnings: string[] = [];
   await handleBridgeMessage({ type: 'bridgeOpenFile', path: 'https://x.com/a' }, {
     openExternal: async () => true,
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: (m) => { warnings.push(m); },
     workspaceRoot: '/proj',
   });
@@ -158,7 +157,7 @@ test('handleBridgeMessage bridgeSaveImage：无 sessionCwd 时回退到 workspac
   const acks: unknown[] = [];
   await handleBridgeMessage({ type: 'bridgeSaveImage', requestId: 's9', name: 'dsh-imgcache-a-0.png', dataB64: 'AAAA' }, {
     openExternal: async () => true,
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: () => {},
     workspaceRoot: '/root',
     writeFile: async () => {},
@@ -173,7 +172,7 @@ test('handleBridgeMessage 处理 bridgeSaveImage：回执 saveImageAck（ok+path
   const acks: unknown[] = [];
   await handleBridgeMessage({ type: 'bridgeSaveImage', requestId: 's1', name: 'dsh-imgcache-a-0.png', dataB64: 'AAAA', sessionCwd: '/ws' }, {
     openExternal: async () => true,
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: () => {},
     writeFile: async () => {},
     rmFile: async () => {},
@@ -190,7 +189,7 @@ test('handleBridgeMessage 处理 bridgeDeleteImages：回执 deleteImagesAck', a
   const acks: unknown[] = [];
   await handleBridgeMessage({ type: 'bridgeDeleteImages', requestId: 'd1', paths: [] }, {
     openExternal: async () => true,
-    openTextDocument: async () => {},
+    openFile: async () => {},
     showWarning: () => {},
     writeFile: async () => {},
     rmFile: async () => {},

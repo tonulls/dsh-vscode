@@ -111,33 +111,38 @@ export function npmNodeModulesRootFrom(p: string): string | undefined {
 }
 
 /**
- * 判断该安装目标是否应当跳过：其**父目录是"命令垫片目录"**（issue #20）。
+ * 判断该安装目标是否应当跳过：最近的已存在祖先是"命令垫片目录"（issue #20）。
  *
- * 关键点（真实文件系统 + 真机验证得出，且踩过一次回归）：
- * 危险不是"父目录里有别人的东西"，而是"**往一个被别的程序独占的命令目录里新增条目**"。
- * 受害目录 `%APPDATA%\DSH Desktop\host-commands\desktop\bin` 被 DSH Desktop 以硬断言独占
- * （只允许它自己的 `dsh.cmd`）：多出任何条目（含我们新建的 `dsh-vscode-bridge/`）都会让
- * 桌面下次启动硬失败。
+ * 危险不是"目录里有别人的包"，而是"往其它程序独占的命令目录新增条目"。
+ * DSH Desktop 的 `…/host-commands/desktop/bin` 只允许 `dsh.cmd`；即使目标被推导为
+ * `bin/node_modules/dsh-vscode-bridge` 且中间的 `node_modules` 尚不存在，也不能因目标父目录
+ * 不存在而漏过检查——必须向上找到最近的已有目录，确认它是否包含 `.cmd`。
  *
- * 判据刻意收窄为「父目录里存在批处理垫片（`*.cmd`）」——这正是"命令目录"的特征：
- * - `…/desktop/bin` 里有 `dsh.cmd` → 跳过 ✅（issue #20 的场景）
- * - `…/node_modules`（npm 全局或 DSH profiles 下的依赖目录）里有成百上千个包，
- *   但不会有 `dsh.cmd` → **放行**，否则桥接无法被刷新（曾因"父目录有他人条目就跳过"
- *   导致 `profiles/node_modules` 的桥接停留在旧版本）。
+ * 判据仍刻意收窄为 `.cmd`：npm 全局或 DSH profiles 的 `node_modules` 中可以有很多其他包，
+ * 但不应包含命令垫片；它们必须可正常刷新。对这些真实存在的 node_modules 目录，只检查最近
+ * 已存在目录并立即停止，不会一路误判到上层的 npm shim 目录。
  *
- * @param parentDir 目标目录的父目录（如 `…/node_modules` 或 `…/desktop/bin`）
+ * @param parentDir 目标目录的父目录（例如 `…/node_modules`，可能尚不存在）
  */
 export function shouldSkipForeignTarget(
   parentDir: string,
   fs: Pick<InstallerFs, 'exists' | 'readdir'>,
 ): boolean {
-  if (!fs.exists(parentDir)) return false; // 父目录不存在：由本扩展创建，安全
-  try {
-    // 只认"命令垫片目录"：含 *.cmd 即视为被别的程序独占的命令目录
-    return fs.readdir(parentDir).some((name) => name.toLowerCase().endsWith('.cmd'));
-  } catch {
-    // 读不到目录内容（权限/IO）时保守跳过：宁可少装一处，也不冒写坏他人目录的风险
-    return true;
+  const windowsPath = /^[a-z]:[\\/]/i.test(parentDir) || parentDir.includes('\\\\');
+  let candidate = parentDir;
+  while (true) {
+    if (fs.exists(candidate)) {
+      try {
+        // 最近的已存在目录含 .cmd，即视为由其他程序独占的命令目录。
+        return fs.readdir(candidate).some((name) => name.toLowerCase().endsWith('.cmd'));
+      } catch {
+        // 读不到目录内容（权限/IO）时保守跳过：不冒写坏他人目录的风险。
+        return true;
+      }
+    }
+    const parent = windowsPath ? win32.dirname(candidate) : dirname(candidate);
+    if (parent === candidate) return false;
+    candidate = parent;
   }
 }
 

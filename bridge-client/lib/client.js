@@ -23,6 +23,7 @@ window.__ModuleLoader__.load({
     console.log("[dsh-vscode-bridge] client.js executed");
     // —— 握手状态 ——
     let bridgeToken = ""; // 父页面下发的握手 token；未握手前为空，不激活任何拦截
+    let dshContext = null; // Cordis client context；用于按当前 sessionId 读取实际 cwd
     // 桥接包版本（与插件版本统一，随包发布；安装器按「版本不一致或 client.js 内容不一致」强制重装）
     const BRIDGE_VERSION = "0.4.2";
 
@@ -455,9 +456,8 @@ window.__ModuleLoader__.load({
           if (path !== null && path !== "") {
             e.preventDefault();
             e.stopPropagation();
-            // openFile 消息仍发送 path；不带 cwd 字段（工作区同步已移除，会话 cwd 不再维护），
-            // 扩展侧以工作区根目录作为相对路径解析兜底。
-            parent.postMessage(buildOpenFileMessage(path), "*");
+            // 有 session cwd 时优先按 DSH 会话目录解析；宿主在 cwd 缺失时仍回退工作区根目录。
+            parent.postMessage(buildOpenFileMessage(path, sessionCwdForOpenFile()), "*");
           }
         }
       }, true); // 捕获阶段：先于 DSH 自身处理器
@@ -535,7 +535,21 @@ window.__ModuleLoader__.load({
     const imageCache = new Map(); // key(imageCacheKey) -> { name, b64, mime }（当前待用的捕获，用后即消费移除）
     let fallbackResendInFlight = false; // 幂等：一个被拒只触发一次重发
     let lastSeenSessionId = ""; // 最近一次对话(session) id，用于会话切换时判定上一对话终止
-    let imgNameSeq = 0; // 图片文件名全局递增序号：保证同一毫秒内落盘的多批图片也不重名（防覆盖）
+    let imgNameSeq = 0;
+
+    // 相对路径必须按 DSH 会话 cwd 解析，而不只是 VS Code 的工作区根。
+    // apply(ctx) 可能尚未完成/某些 DSH 版本没有暴露 sessions store，故安全地返回 undefined，
+    // 让宿主保留 workspaceRoot fallback。
+    function sessionCwdForOpenFile() {
+      if (!dshContext || !lastSeenSessionId) return undefined;
+      try {
+        const snapshot = dshContext.sessions?.list?.getSnapshot?.();
+        const cwd = snapshot?.byId?.[lastSeenSessionId]?.cwd;
+        return typeof cwd === "string" && cwd.trim() !== "" ? cwd : undefined;
+      } catch {
+        return undefined;
+      }
+    } // 图片文件名全局递增序号：保证同一毫秒内落盘的多批图片也不重名（防覆盖）
 
     // —— 临时图片「模型看完即删」生命周期 ——
     // 模型在回合内通过图像工具按路径读取文件，文件必须存活到读取完成。因此每条消息的
@@ -713,7 +727,7 @@ window.__ModuleLoader__.load({
       window.fetch = async (input, init) => {
         const res = await origFetch(input, init);
         try {
-          if (!imageFallbackEnabled || bridgeToken === "") return res;
+          if (bridgeToken === "") return res;
           if (!init || init.method !== "POST" || typeof init.body !== "string" || init.body === "") return res;
           const parsed = JSON.parse(init.body);
           // DSH 线格式两代兼容：
@@ -723,9 +737,15 @@ window.__ModuleLoader__.load({
           // unwrapRpcRequest 负责把两代都还原成「业务请求对象」，normalizeRpcMethod 把
           // 斜杠端点归一成点分（session/prompt → session.prompt）供下方判断复用。
           const payload = unwrapRpcRequest(parsed);
-          // —— 对话生命周期：新建/删除会话或 prompt 观测到会话 id 变更 → 上一对话终止，清理临时图片 ——
           const method = normalizeRpcMethod(parsed && parsed.method);
           const sessionId = payload && typeof payload.sessionId === "string" ? payload.sessionId : "";
+          // sessionId 也用于文件路径解析；即使关闭图片降级，也维护最新会话 id。
+          if (!imageFallbackEnabled) {
+            if (method === "session.create") lastSeenSessionId = "";
+            else if (sessionId !== "") lastSeenSessionId = sessionId;
+            return res;
+          }
+          // —— 对话生命周期：新建/删除会话或 prompt 观测到会话 id 变更 → 上一对话终止，清理临时图片 ——
           if (method === "session.create") handleConversationEnd("新建", true);
           // 注：DSH ≥0.1.2 已无 session.delete 端点（删除会话走 workspace/archiveSession），
           // 该分支仅为 ≤0.1.1 兼容保留；0.1.2 下靠 sessionId 变更与 TTL 兜底清理
@@ -789,8 +809,9 @@ window.__ModuleLoader__.load({
     }, true);
     window.addEventListener("blur", hideMenu);
     window.addEventListener("scroll", hideMenu, true);
-    // cordis 插件约定：apply 挂载点（本桥接无需额外挂载，保留占位以符合插件契约）
-    exports.apply = () => {};
+    // Cordis client plugin apply 挂载点：保存上下文以读取 DSH 当前 session 的 cwd。
+    // DOM 拦截器不依赖该 API；ctx 缺失时文件相对路径仍由宿主回退到 workspaceRoot。
+    exports.apply = (ctx) => { dshContext = ctx ?? null; };
     return module.exports;
   }
 });

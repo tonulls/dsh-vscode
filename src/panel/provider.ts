@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import * as nodeFs from 'node:fs/promises';
 import { ServiceManager } from '../service/manager';
 import { handleBridgeMessage } from '../bridge/host';
+import { openFileWithDefaultEditor } from '../bridge/open';
 import { classifyRemote, toLocalhostUrl, type RemoteKind } from '../remote';
 import { t } from '../i18n';
 import {
@@ -175,9 +176,9 @@ export class DshPanelProvider implements vscode.WebviewViewProvider {
   private bridgeDeps(): Parameters<typeof handleBridgeMessage>[1] {
     return {
       openExternal: (u) => vscode.env.openExternal(vscode.Uri.parse(u)),
-      // showTextDocument 返回 TextEditor，而依赖约定返回 Thenable<void>：用 async 包装丢弃返回值
-      openTextDocument: async (p) => {
-        await vscode.window.showTextDocument(vscode.Uri.file(p), { preview: false });
+      // vscode.open 按文件类型选择编辑器（如图片/PDF preview），await 后丢弃命令返回值。
+      openFile: async (p) => {
+        await openFileWithDefaultEditor(vscode, p);
       },
       // 用户提示统一走 vscode.window.showWarningMessage（host 层不 import vscode，保持纯逻辑可单测）
       showWarning: (m) => void vscode.window.showWarningMessage(m),

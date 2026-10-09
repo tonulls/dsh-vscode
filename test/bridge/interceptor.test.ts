@@ -156,13 +156,56 @@ function loadBridge(opts: { fetch: (input: unknown, init: any) => Promise<Respon
     parentMessages,
     emitWin,
     emitDoc,
-    /** 执行 factory 并返回 module.exports（应用实例） */
-    apply() {
+    /** 执行 factory，并模拟 Cordis 调用 apply(ctx) 注入 client context */
+    apply(dshContext?: unknown) {
       const req = (id: string) => { throw new Error('unexpected require: ' + id); };
-      return loadedPlugin.factory(req);
+      const instance = loadedPlugin.factory(req);
+      instance.apply?.(dshContext);
+      return instance;
     },
   };
 }
+
+test('打开相对文件时传递 DSH 会话 cwd；缺少上下文时省略 cwd', async () => {
+  const createOpenFileMessage = async (context?: unknown) => {
+    const b = loadBridge({ fetch: async () => jsonResponse({ ok: true }) });
+    try {
+      b.apply(context);
+      b.emitWin('message', { kind: 'bridgeHello', token: 'tok' });
+      await b.window.fetch('/rpc', {
+        method: 'POST',
+        body: JSON.stringify({ method: 'session.prompt', payload: { sessionId: 'session-1', content: [] } }),
+      });
+      const button = {
+        getAttribute: (name: string) => name === 'title' ? '_pasted_image.png' : null,
+        matches: () => false,
+      };
+      b.emitDoc('click', {
+        target: {
+          closest: (selector: string) => selector === 'a' ? null : button,
+        },
+        preventDefault() {},
+        stopPropagation() {},
+      });
+      return b.parentMessages.find((message) => message?.kind === 'openFile');
+    } finally {
+      rmSync(b.outDir, { recursive: true, force: true });
+    }
+  };
+
+  const cwd = 'D:\\project\\session';
+  const message = await createOpenFileMessage({
+    sessions: { list: { getSnapshot: () => ({ byId: { 'session-1': { cwd } } }) } },
+  });
+  assert.equal(message?.kind, 'openFile');
+  assert.equal(message?.path, '_pasted_image.png');
+  assert.equal(message?.cwd, cwd);
+
+  const fallbackMessage = await createOpenFileMessage();
+  assert.equal(fallbackMessage?.kind, 'openFile');
+  assert.equal(fallbackMessage?.path, '_pasted_image.png');
+  assert.equal('cwd' in (fallbackMessage ?? {}), false);
+});
 
 test('被拒（非视觉模型）→ 保存图片、图片改为地址重发、返回成功响应且无通知', async () => {
   const calls: { input: unknown; init: any }[] = [];

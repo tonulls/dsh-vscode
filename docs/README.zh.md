@@ -176,7 +176,7 @@ dsh web: http://127.0.0.1:3080/?token=<一次性 token>
 | `dsh.autoStart` | `true` | 服务未运行时自动启动 |
 | `dsh.stopOnExit` | `true` | 关闭最后一个窗口时停止插件自启的服务 |
 | `dsh.extraArgs` | `[]` | 启动 `dsh web` 时附加的参数 |
-| `dsh.executablePath` | `""` | dsh 可执行文件绝对路径（Windows 为 dsh.cmd）；留空则从 PATH 查找 |
+| `dsh.executablePath` | `""` | dsh 的路径（Windows 可为 dsh.cmd 或 bin.js）；留空则搜索 PATH 并自动检测标准安装目录中的 DSH Desktop |
 | `dsh.openInBrowser` | `false` | 服务启动后在默认浏览器中打开 DSH 页面（关闭时向 `dsh web` 传递 `--no-open`） |
 | `dsh.remote.enabled` | `false` | 启用远程场景（SSH Remote / WSL / Dev Containers / Codespaces）：在远端运行 dsh，经 VS Code 隧道在面板中打开（默认关闭；开启后需重载窗口生效） |
 | `dsh.image.fallback` | `true` | 当前模型无视觉能力时，把上传图片以文件路径形式随消息发送而不报错（文件缓存在会话工作目录，面板关闭时清理） |
@@ -222,7 +222,7 @@ dsh web: http://127.0.0.1:3080/?token=<一次性 token>
 
 ```bash
 npm install
-npm run test          # 284 个单元/集成测试（含真实 dsh web 全流程：服务生命周期、鉴权会话）
+npm run test          # 293 个单元/集成测试（含真实 dsh web 全流程：服务生命周期、鉴权会话）
 npm run compile       # 构建 out/extension.js
 npm run watch         # 监听构建
 npm run typecheck     # 类型检查

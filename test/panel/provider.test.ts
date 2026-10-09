@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DshPanelProvider } from '../../src/panel/provider';
+import { env as vscodeEnv } from '../vscode-stub';
 
 /** 假 ServiceManager(仅 provider 用到的接口) */
 function fakeManager() {
@@ -57,6 +58,28 @@ test('refreshContextBar 重渲染并让新的缩放档位即时生效', () => {
   provider.refreshContextBar();
   assert.ok(view.webview.html.includes('style="--dshv-zoom:0.8'), '重渲染后应写入新的内联缩放变量');
   assert.equal(view.posted.length, 0, '重渲染不应顺带发任何下行消息');
+});
+
+test('WSL 默认可用，iframe src 与 CSP 都使用 localhost（issue #13）', () => {
+  const remoteEnv = vscodeEnv as unknown as { remoteName?: string };
+  const originalRemoteName = remoteEnv.remoteName;
+  remoteEnv.remoteName = 'wsl';
+  try {
+    const provider = new DshPanelProvider(
+      fakeManager() as never,
+      undefined, undefined,
+      () => '/proj', () => true, () => false,
+      async (url) => url,
+    );
+    const view = fakeView();
+    provider.resolveWebviewView(view as never);
+    provider.refresh(); // WSL path settles synchronously and renders localhost iframe/CSP.
+    assert.ok(view.webview.html.includes('src="http://localhost:3080/"'), 'WSL frame uses localhost');
+    assert.ok(view.webview.html.includes('frame-src http://localhost:3080'), 'CSP derives origin from final frame URL');
+    assert.ok(!view.webview.html.includes('SSH Remote'), 'WSL is not blocked as an SSH tunnel');
+  } finally {
+    remoteEnv.remoteName = originalRemoteName;
+  }
 });
 
 test('未打开面板时 refreshContextBar 安全返回(不抛异常)', () => {

@@ -41,6 +41,8 @@ export interface RunnerEnv {
   execPath?: string;
   /** 环境变量 PATH 字符串值（生产为 process.env.PATH） */
   path?: string;
+  /** Windows 用户本地应用目录（用于发现 DSH Desktop 安装） */
+  localAppData?: string;
   /** Electron 运行时版本（仅 Electron 环境有值；真实 Node 下为 undefined）。
    *  扩展宿主是 Electron，process.execPath 指向 Code.exe，绝不能当作 node 使用。 */
   electronVersion?: string;
@@ -104,7 +106,22 @@ export function findInPath(
 }
 
 /**
- * 由 dsh.cmd 的绝对路径推导 npm shim 的真实入口 bin.js 路径。
+ * Найти shim DSH Desktop в стандартном пользовательском каталоге Windows.
+ * Каталог Desktop не добавляется в targets установки bridge: его runtime принадлежит приложению.
+ */
+export function findDshDesktopShim(
+  localAppData: string | undefined,
+  existsImpl: (p: string) => boolean = existsSync,
+): string | null {
+  if (!localAppData) return null;
+  const candidate = win32Path.join(
+    localAppData, 'Programs', 'DeepSeek Harness', 'resources', 'runtime', 'cli', 'bin', 'dsh.cmd',
+  );
+  return existsImpl(candidate) ? candidate : null;
+}
+
+/**
+ * 由 dsh.cmd 的绝对路径推导 npm shim 的真实入口 bin.js 路径.
  *
  * npm 在 Windows 上生成的 shim（如 `dsh.cmd`）实际是把调用转发到同目录下的
  * `node_modules/<scope>/<pkg>/lib/bin.js`。本函数把 shim 所在目录替换为该真实入口
@@ -118,27 +135,58 @@ export function binJsFromShim(dshCmdPath: string): string {
   return win32Path.join(win32Path.dirname(dshCmdPath), 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
 }
 
-/** Windows 下"node 直跑 bin.js"的启动参数 */
+/** Windows 下的启动方式：npm 使用系统 Node 跑 bin.js，Desktop 直接运行其 CLI exe。 */
 export interface WindowsDshInvocation {
-  /** 实际 spawn 的命令（node 可执行文件绝对路径） */
+  /** spawn 命令；nodeBased=true 时此字段由系统 Node 路径覆盖 */
   command: string;
-  /** 需排在 'web ...' 之前的参数前缀（即 bin.js 绝对路径） */
+  /** 放在 web 参数前的入口参数；Desktop exe 不需要前缀 */
   argsPrefix: string[];
+  /** 是否通过系统 Node 执行 argsPrefix 中的 JS 入口 */
+  nodeBased: boolean;
 }
 
 /**
- * 构造 Windows 下"node 直跑 bin.js"的启动参数。
- *
- * 背景：Windows 上 `spawn('dsh.cmd')` 会因 .cmd 是批处理 shim 而在 Node v24 下同步抛
- * EINVAL，改用 `node <bin.js>` 直跑真实入口即可绕过。本函数返回 { command: execPath,
- * argsPrefix: [binJsPath] }，调用方将其作为 spawn(command, [...argsPrefix, 'web', ...])。
- *
- * @param dshCmdPath dsh.cmd（或直接 bin.js）的绝对路径；bin.js 路径由其 dirname 推导
- * @param execPath   node 可执行文件绝对路径（生产为 process.execPath）
- * @returns Windows 下 node 直跑 bin.js 的启动参数
+ * 识别 DSH Desktop 自带 shim 对应的应用 exe。仅接受 Desktop 的已知 runtime 路径，
+ * 避免把任意 dsh.cmd 上溯四级误判为 Desktop。不存在则返回 null。
  */
-export function windowsDshInvocation(dshCmdPath: string, execPath: string): WindowsDshInvocation {
-  return { command: execPath, argsPrefix: [binJsFromShim(dshCmdPath)] };
+export function dshDesktopExeFromShim(
+  dshCmdPath: string,
+  existsImpl: (p: string) => boolean = existsSync,
+): string | null {
+  const normalized = win32Path.normalize(dshCmdPath).toLowerCase();
+  if (!normalized.endsWith('\\resources\\runtime\\cli\\bin\\dsh.cmd')) return null;
+  const candidate = win32Path.resolve(
+    win32Path.dirname(dshCmdPath), '..', '..', '..', '..', 'DeepSeek Harness.exe',
+  );
+  return existsImpl(candidate) ? candidate : null;
+}
+
+/**
+ * 选择 Windows 启动方式。
+ * npm shim 指向存在的 bin.js 时继续使用系统 Node（避免 spawn .cmd 的 EINVAL）；
+ * DSH Desktop 的已知 shim layout 则直接启动其 DeepSeek Harness.exe；其他未知 layout
+ * 返回可识别错误，避免把 MODULE_NOT_FOUND 误判为端口占用并不断换端口。
+ */
+export function windowsDshInvocation(
+  dshCmdPath: string,
+  execPath: string,
+  existsImpl: (p: string) => boolean = existsSync,
+): WindowsDshInvocation {
+  if (dshCmdPath.toLowerCase().endsWith('.js')) {
+    return { command: execPath, argsPrefix: [dshCmdPath], nodeBased: true };
+  }
+  const npmEntry = binJsFromShim(dshCmdPath);
+  if (existsImpl(npmEntry)) {
+    return { command: execPath, argsPrefix: [npmEntry], nodeBased: true };
+  }
+  const desktopExe = dshDesktopExeFromShim(dshCmdPath, existsImpl);
+  if (desktopExe !== null) {
+    return { command: desktopExe, argsPrefix: [], nodeBased: false };
+  }
+  throw Object.assign(
+    new Error(`Could not resolve DSH entry for launcher ${dshCmdPath}`),
+    { code: 'DSH_ENTRY_NOT_FOUND' },
+  );
 }
 
 /**
@@ -225,7 +273,11 @@ export function createProcessRunner(
   platform: string = process.platform,
   graceMs = 3000,
   existsImpl: (p: string) => boolean = existsSync,
-  env: RunnerEnv = { execPath: process.execPath, path: process.env.PATH ?? '' },
+  env: RunnerEnv = {
+    execPath: process.execPath,
+    path: process.env.PATH ?? '',
+    localAppData: process.env.LOCALAPPDATA,
+  },
 ): ProcessRunner {
   let lastChild: ChildProcessLike | null = null;
   let lastStart: { command: string; args: string[] } | null = null;
@@ -256,35 +308,28 @@ export function createProcessRunner(
       let command: string;
       let spawnArgs: string[];
       if (platform === 'win32') {
-        // Windows：.cmd 是批处理 shim，Node v24 直接 spawn 会同步抛 EINVAL，
-        // 故改为用 node 直接执行 shim 指向的真实入口 bin.js，绕过 .cmd shim。
+        // Windows：npm .cmd нельзя напрямую spawn-ить в Node 24, поэтому проверяем npm bin.js
+        // и запускаем его системным Node. DSH Desktop использует собственный CLI exe.
         const pathEnv = env.path ?? process.env.PATH ?? '';
 
-        // 1) 确定 dsh.cmd 的绝对路径：显式 executablePath 优先；否则在 PATH 里找 dsh.cmd
+        // 1) Явный путь имеет приоритет; иначе PATH, затем стандартная установка DSH Desktop.
         let shimPath: string | null;
         if (executablePath && executablePath.length > 0) {
           shimPath = executablePath;
         } else {
-          shimPath = findInPath('dsh.cmd', pathEnv, existsImpl);
-          // 找不到 dsh.cmd → 保持"未找到 dsh"语义（code ENOENT），manager 的 ENOENT 分支照常工作
+          shimPath = findInPath('dsh.cmd', pathEnv, existsImpl)
+            ?? findDshDesktopShim(env.localAppData ?? process.env.LOCALAPPDATA, existsImpl);
           if (shimPath === null) {
-            throw Object.assign(new Error('dsh.cmd not found in PATH'), { code: 'ENOENT' });
+            throw Object.assign(new Error('dsh.cmd not found in PATH or standard DSH Desktop location'), { code: 'ENOENT' });
           }
         }
 
-        // 2) 若 executablePath 直接指向 bin.js（以 .js 结尾），则 argsPrefix 就用该 js 本身；
-        //    否则由 shim 的 dirname 推导 bin.js 绝对路径。
-        const argsPrefix = shimPath.endsWith('.js')
-          ? [shimPath]
-          : [binJsFromShim(shimPath)];
-
-        // 3) 解析执行 bin.js 所用的 node.exe：Electron 环境下 execPath 是 Code.exe 不可用，
-        //    必须解析系统 PATH 里的 node.exe（详见 resolveWindowsNodeExecutable 注释）。
-        const nodeExecutable = resolveWindowsNodeExecutable(shimPath, env, existsImpl);
-
-        // 4) spawn(node, [binJs, 'web', --host, --port, ...extraArgs], options)
-        command = nodeExecutable;
-        spawnArgs = [...argsPrefix, ...webArgs];
+        // 2) npm layout → node bin.js; DSH Desktop layout → приложение напрямую.
+        const invocation = windowsDshInvocation(shimPath, env.execPath ?? process.execPath, existsImpl);
+        command = invocation.nodeBased
+          ? resolveWindowsNodeExecutable(shimPath, env, existsImpl)
+          : invocation.command;
+        spawnArgs = [...invocation.argsPrefix, ...webArgs];
         child = spawnImpl(command, spawnArgs, spawnOptions);
       } else {
         // 非 Windows 分支完全不变：仍 spawn 'dsh'（或显式 executablePath）

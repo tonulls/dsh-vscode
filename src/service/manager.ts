@@ -276,7 +276,8 @@ export class ServiceManager {
         }
         // 区分错误类型：EINVAL 是 spawn 参数无效（Windows 上 cwd 非法等，重试后仍无效）；
         // NODE_NOT_FOUND 是 Windows 下找不到可用的 node.exe（Electron 环境不能把 Code.exe 当 node）；
-        // ENOENT 才是命令缺失；其余保守地归为「未找到命令」。
+        // DSH_ENTRY_NOT_FOUND 表示已找到 shim，但未找到 npm bin.js 或 Desktop exe；
+        // ENOENT — команда отсутствует; прочее консервативно считаем отсутствием команды.
         if (code === 'EINVAL') {
           this.set({
             state: 'failed',
@@ -285,6 +286,8 @@ export class ServiceManager {
           });
         } else if (code === 'NODE_NOT_FOUND') {
           this.set({ state: 'failed', error: 'err.nodeNotFound' });
+        } else if (code === 'DSH_ENTRY_NOT_FOUND') {
+          this.set({ state: 'failed', error: 'err.dshEntryNotFound' });
         } else {
           this.set({ state: 'failed', error: 'err.dshNotFound' });
         }

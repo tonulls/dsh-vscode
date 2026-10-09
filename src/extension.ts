@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { initI18n, t } from './i18n';
 import { readConfig, buildChildEnv, type DshConfig } from './config';
 import { probeService } from './service/detect';
-import { createProcessRunner, findInPath, findInPathPosix, resolveDshPackageJsonPath } from './service/process';
+import { createProcessRunner, findInPath, findInPathPosix, findDshDesktopShim, resolveDshPackageJsonPath } from './service/process';
 import { ServiceManager, type ManagerOptions } from './service/manager';
 import { DshPanelProvider } from './panel/provider';
 import { StatusBarController } from './statusbar';
@@ -129,7 +129,8 @@ function describeDshExecutable(config: DshConfig): { path: string | null; versio
     // Windows：显式 executablePath 优先；否则 PATH 找 dsh.cmd
     shim = config.executablePath && !config.executablePath.endsWith('.js')
       ? config.executablePath
-      : findInPath('dsh.cmd', process.env.PATH ?? '');
+      : findInPath('dsh.cmd', process.env.PATH ?? '')
+        ?? findDshDesktopShim(process.env.LOCALAPPDATA);
   } else {
     // 非 Windows：显式路径优先；否则在 PATH（':' 分隔）里找 dsh shim
     shim = config.executablePath && config.executablePath.length > 0

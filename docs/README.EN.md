@@ -178,7 +178,7 @@ The bridge only works inside the panel. If it is inactive (e.g. you open the DSH
 | `dsh.autoStart` | `true` | Auto-start the service when it is not running |
 | `dsh.stopOnExit` | `true` | Stop the extension-started service when the last window closes |
 | `dsh.extraArgs` | `[]` | Extra arguments appended when starting `dsh web` |
-| `dsh.executablePath` | `""` | Absolute path to the `dsh` executable (`dsh.cmd` on Windows); empty = look up on PATH |
+| `dsh.executablePath` | `""` | Path to `dsh` (`dsh.cmd` or `bin.js` on Windows); empty = search PATH and auto-detect DSH Desktop in its standard install directory |
 | `dsh.openInBrowser` | `false` | Open the DSH page in the default browser after the service starts (when off, `--no-open` is passed to `dsh web`) |
 | `dsh.remote.enabled` | `false` | Enable remote scenarios (SSH Remote / WSL / Dev Containers / Codespaces): run dsh on the remote and open the panel through a VS Code tunnel (off by default; reload the window after enabling) |
 | `dsh.image.fallback` | `true` | Send attached images as file-path references when the active model has no vision, instead of failing (files are cached in the session working directory and removed when the panel closes) |
@@ -197,7 +197,7 @@ Requirements: Node.js ≥ 22, VS Code ≥ 1.91.
 
 ```bash
 npm install
-npm run test          # 284 unit/integration tests (including real dsh web flows: service lifecycle, auth session)
+npm run test          # 293 unit/integration tests (including real dsh web flows: service lifecycle, auth session)
 npm run compile       # builds out/extension.js
 npm run watch         # watch build
 npm run typecheck     # type check

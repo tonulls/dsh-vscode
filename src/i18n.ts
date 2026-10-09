@@ -36,6 +36,7 @@ const messages = {
     // 错误原因（error 字段存的 i18n 键）
     'err.portOccupied': 'Port {port} is occupied by another program. Change dsh.port in settings, then retry.',
     'err.dshNotFound': 'The dsh command was not found. Install DeepSeek Harness first.',
+    'err.dshEntryNotFound': 'The dsh launcher was found, but its runtime entry could not be located. Repair DSH Desktop or set dsh.executablePath to a valid bin.js entry.',
     'err.nodeNotFound': 'Node.js (node.exe) was not found in PATH. Install Node.js or add it to PATH, then restart VS Code.',
     'err.spawnEinval': 'Failed to start dsh: invalid spawn parameters (working directory: {cwd}). Try opening a local folder, or set dsh.executablePath in settings.',
     'err.startTimeout': 'Service did not become ready within {seconds}s. See the DSH log for details.',
@@ -99,6 +100,7 @@ const messages = {
     'msg.authMismatch': '网址指向 {urlHost}，但正在运行的 DSH 服务在 {targetHost}。请从该服务的日志中复制网址。',
     'err.portOccupied': '端口 {port} 被其他程序占用。请在设置中修改 dsh.port 后重试。',
     'err.dshNotFound': '未找到 dsh 命令，请先安装 DeepSeek Harness。',
+    'err.dshEntryNotFound': '已找到 dsh 启动器，但未找到可运行的入口。请修复 DSH Desktop，或将 dsh.executablePath 设置为有效的 bin.js 路径。',
     'err.nodeNotFound': 'PATH 中未找到 Node.js（node.exe）。请安装 Node.js 或将其加入 PATH 后重启 VS Code。',
     'err.spawnEinval': 'dsh 启动失败：启动参数无效（工作目录：{cwd}）。请改用本地路径打开项目，或在设置中指定 dsh.executablePath。',
     'err.startTimeout': '服务在 {seconds} 秒内未就绪，详见 DSH 日志。',
@@ -155,6 +157,7 @@ const messages = {
     'msg.authMismatch': 'URL указывает на {urlHost}, а запущенная служба DSH находится на {targetHost}. Скопируйте URL из журнала этой службы.',
     'err.portOccupied': 'Порт {port} занят другой программой. Измените параметр dsh.port в настройках и повторите попытку.',
     'err.dshNotFound': 'Команда dsh не найдена. Сначала установите DeepSeek Harness.',
+    'err.dshEntryNotFound': 'Запускатель dsh найден, но его исполняемый модуль не обнаружен. Восстановите DSH Desktop или укажите корректный путь bin.js в dsh.executablePath.',
     'err.nodeNotFound': 'Node.js (node.exe) не найден в PATH. Установите Node.js или добавьте его в PATH, затем перезапустите VS Code.',
     'err.spawnEinval': 'Не удалось запустить dsh: неверные параметры запуска (рабочий каталог: {cwd}). Откройте локальную папку или задайте dsh.executablePath в настройках.',
     'err.startTimeout': 'Служба не запустилась за {seconds} с. Подробности — в журнале DSH.',

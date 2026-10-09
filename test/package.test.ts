@@ -116,9 +116,8 @@ test('#27 回归：面板缩放仍接线且传参位置正确（0.4.2 保留 iss
 });
 
 // ——— 文档与测试数一致性 ———
-// README/CHANGELOG 里的测试数在发布流程中被反复手改（326 → 275 → 277 → 283），
-// 极易漏改或写错。这里用"源码里 test( 的静态计数"当基准，把漂移钉死。
-test('README на русском и китайском, CHANGELOG: число тестов соответствует фактическому', () => {
+// README 与 Unreleased changelog 的测试数以源码 test( 静态计数为准；已发布版本的数字是历史记录。
+test('README и Unreleased CHANGELOG объявляют фактическое число тестов', () => {
   const root = join(__dirname, '..', '..');
   // ① 静态计数：递归 test/ 下所有 *.test.ts 的顶层 test( 调用
   const stack = [join(root, 'test')];
@@ -144,13 +143,13 @@ test('README на русском и китайском, CHANGELOG: число т
     assert.equal(Number(m[1]), count, `${file} 声明的测试数应与实际一致（实际 ${count}）`);
   }
 
-  // ③ CHANGELOG：0.4.2 段落的 "npm test X/X 全绿" 与 "由 A 降至 X"
+  // ③ Unreleased CHANGELOG отражает текущий запуск; выпущенные версии не переписываем задним числом.
   const changelog = readFileSync(join(root, 'docs', 'CHANGELOG.md'), 'utf8');
-  const green = /`npm test` (\d+)\/\1 全绿/.exec(changelog);
-  assert.ok(green, 'CHANGELOG 应写明 npm test 全绿的数量');
-  assert.equal(Number(green[1]), count, 'CHANGELOG 的 npm test 数字应与实际一致');
-  const dropped = /测试用例由 (\d+) 降至 (\d+)/.exec(changelog);
-  assert.ok(dropped, 'CHANGELOG 应写明测试数的变化');
-  assert.equal(Number(dropped[2]), count, 'CHANGELOG 的"降至"数字应与实际一致');
-  assert.ok(Number(dropped[1]) > Number(dropped[2]), '撤回后测试数应下降');
+  const unreleased = /## \[Unreleased\]([\s\S]*?)(?=\n## \[|$)/.exec(changelog)?.[1];
+  assert.ok(unreleased, 'CHANGELOG 应包含 Unreleased текущих изменений');
+  const russianSummary = /Автоматизированные проверки: (\d+) тест(?:ов|а) \((\d+) пройдено, (\d+) пропущено, (\d+) ошибок\)/i.exec(unreleased);
+  assert.ok(russianSummary, 'Unreleased 应用俄语说明测试总数、通过、跳过和失败数');
+  assert.equal(Number(russianSummary[1]), count, 'Unreleased 的测试总数应与源码一致');
+  assert.equal(Number(russianSummary[2]) + Number(russianSummary[3]) + Number(russianSummary[4]), count, '测试统计应相加等于总数');
+  assert.equal(Number(russianSummary[4]), 0, 'Unreleased 测试失败数必须为 0');
 });

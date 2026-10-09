@@ -351,6 +351,23 @@ test('startDsh 抛 NODE_NOT_FOUND（Windows 找不到 node.exe）：failed + err
   h.manager.dispose();
 });
 
+test('startDsh 抛 DSH_ENTRY_NOT_FOUND：failed + 专用入口错误', async () => {
+  const h = makeHarness(undefined, {
+    processRunner: {
+      startDsh: () => {
+        throw Object.assign(new Error('Could not resolve DSH entry'), { code: 'DSH_ENTRY_NOT_FOUND' });
+      },
+      stopChild: async () => {},
+      lastChild: null,
+    },
+  });
+  h.probeQueue = ['down'];
+  const s = await h.manager.ensureRunning();
+  assert.equal(s.state, 'failed');
+  assert.equal(s.error, 'err.dshEntryNotFound');
+  h.manager.dispose();
+});
+
 test('stop() 只停插件自启的子进程', async () => {
   const h = makeHarness();
   h.probeQueue = ['down', 'dsh'];

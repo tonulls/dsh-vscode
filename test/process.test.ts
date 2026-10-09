@@ -9,6 +9,7 @@ import {
   findInPathPosix,
   resolveDshPackageJsonPath,
   binJsFromShim,
+  findDshDesktopShim,
   windowsDshInvocation,
   type ChildProcessLike,
   type SpawnFn,
@@ -177,7 +178,8 @@ test('startDsh 未传 executablePath 时 win32 从 PATH 推导 bin.js（PATH 注
     return new FakeChild();
   };
   const npmDir = 'C:\\Users\\x\\AppData\\Roaming\\npm';
-  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === `${npmDir}\\dsh.cmd`, {
+  const npmEntry = `${npmDir}\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js`;
+  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === `${npmDir}\\dsh.cmd` || p === npmEntry, {
     execPath: 'C:\\node\\node.exe',
     path: `C:\\Windows\\System32;${npmDir}`,
   });
@@ -187,6 +189,35 @@ test('startDsh 未传 executablePath 时 win32 从 PATH 推导 bin.js（PATH 注
     `${npmDir}\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js`,
     'web', '--host', '127.0.0.1', '--port', '3080', '--no-open',
   ]);
+});
+
+test('startDsh автоматически обнаруживает стандартный DSH Desktop и запускает его exe', () => {
+  const calls: { cmd: string; args: string[] }[] = [];
+  const localAppData = 'C:\\Users\\me\\AppData\\Local';
+  const shim = `${localAppData}\\Programs\\DeepSeek Harness\\resources\\runtime\\cli\\bin\\dsh.cmd`;
+  const exe = `${localAppData}\\Programs\\DeepSeek Harness\\DeepSeek Harness.exe`;
+  const runner = createProcessRunner(
+    (cmd, args) => { calls.push({ cmd, args }); return new FakeChild(); },
+    'win32',
+    3000,
+    (p) => p === shim || p === exe,
+    { execPath: 'C:\\Program Files\\Microsoft VS Code\\Code.exe', path: 'C:\\Windows\\System32', localAppData },
+  );
+  runner.startDsh({ host: '127.0.0.1', port: 3080, extraArgs: [] });
+  assert.equal(calls[0].cmd, exe);
+  assert.deepEqual(calls[0].args, ['web', '--host', '127.0.0.1', '--port', '3080', '--no-open']);
+});
+
+test('startDsh win32 + найден shim, но нет поддерживаемого entry → DSH_ENTRY_NOT_FOUND', () => {
+  const shim = 'C:\\tools\\dsh.cmd';
+  const runner = createProcessRunner(
+    () => new FakeChild(), 'win32', 3000, (p) => p === shim,
+    { execPath: 'C:\\node\\node.exe', path: 'C:\\tools' },
+  );
+  assert.throws(
+    () => runner.startDsh({ host: '127.0.0.1', port: 3080, extraArgs: [] }),
+    (err: Error & { code?: string }) => err.code === 'DSH_ENTRY_NOT_FOUND',
+  );
 });
 
 test('startDsh win32 + 找不到 dsh.cmd（exists 全 false）→ 抛 code ENOENT', () => {
@@ -209,7 +240,8 @@ test('startDsh win32 + Electron 环境：绝不使用 execPath（Code.exe），�
   // 模拟 VS Code 扩展宿主：Electron 运行时，execPath 指向 Code.exe（不可当 node 用），
   // PATH 里 node.exe 位于 C:\Program Files\nodejs（exists 仅对该路径返回 true）
   const nodeExe = 'C:\\Program Files\\nodejs\\node.exe';
-  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === nodeExe, {
+  const npmEntry = 'C:\\npm\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js';
+  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === nodeExe || p === npmEntry, {
     execPath: 'C:\\Users\\x\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe',
     path: `C:\\Windows\\System32;C:\\Program Files\\nodejs`,
     electronVersion: '39.2.0',
@@ -224,7 +256,8 @@ test('startDsh win32 + Electron 环境：绝不使用 execPath（Code.exe），�
 });
 
 test('startDsh win32 + Electron 环境且 PATH 无 node.exe → 抛 code NODE_NOT_FOUND', () => {
-  const runner = createProcessRunner(() => new FakeChild(), 'win32', 3000, () => false, {
+  const npmEntry = 'C:\\npm\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js';
+  const runner = createProcessRunner(() => new FakeChild(), 'win32', 3000, (p) => p === npmEntry, {
     execPath: 'C:\\Users\\x\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe',
     path: 'C:\\Windows\\System32',
     electronVersion: '39.2.0',
@@ -242,7 +275,8 @@ test('startDsh win32 + execPath 为 Code.exe（electronVersion 未注入）：�
     return new FakeChild();
   };
   const nodeExe = 'C:\\Program Files\\nodejs\\node.exe';
-  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === nodeExe, {
+  const npmEntry = 'C:\\npm\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js';
+  const runner = createProcessRunner(spawnImpl, 'win32', 3000, (p) => p === nodeExe || p === npmEntry, {
     execPath: 'C:\\Users\\x\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe',
     path: 'C:\\Program Files\\nodejs',
     // 关键：不注入 electronVersion——模拟 versions.electron 检测意外失效，靠文件名兜底
@@ -314,12 +348,37 @@ test('binJsFromShim：由 dsh.cmd 绝对路径推导 npm shim 真实入口 bin.j
   assert.equal(binJsFromShim(shim), expected);
 });
 
-test('windowsDshInvocation：command 为传入 execPath，argsPrefix[0] 为 bin.js 路径', () => {
-  const inv = windowsDshInvocation('C:\\npm-global\\dsh.cmd', 'C:\\node\\node.exe');
+test('windowsDshInvocation：npm shim 使用存在的 bin.js', () => {
+  const inv = windowsDshInvocation('C:\\npm-global\\dsh.cmd', 'C:\\node\\node.exe', () => true);
   assert.equal(inv.command, 'C:\\node\\node.exe');
+  assert.equal(inv.nodeBased, true);
   assert.deepEqual(inv.argsPrefix, [
     'C:\\npm-global\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js',
   ]);
+});
+
+test('findDshDesktopShim：仅命中标准 LOCALAPPDATA 安装路径', () => {
+  const root = 'C:\\Users\\me\\AppData\\Local';
+  const expected = `${root}\\Programs\\DeepSeek Harness\\resources\\runtime\\cli\\bin\\dsh.cmd`;
+  assert.equal(findDshDesktopShim(root, (p) => p === expected), expected);
+  assert.equal(findDshDesktopShim(root, () => false), null);
+  assert.equal(findDshDesktopShim(undefined, () => true), null);
+});
+
+test('windowsDshInvocation：DSH Desktop shim 运行 Desktop exe，不推导不存在的 npm bin.js', () => {
+  const shim = 'C:\\Users\\me\\AppData\\Local\\Programs\\DeepSeek Harness\\resources\\runtime\\cli\\bin\\dsh.cmd';
+  const exe = 'C:\\Users\\me\\AppData\\Local\\Programs\\DeepSeek Harness\\DeepSeek Harness.exe';
+  const inv = windowsDshInvocation(shim, 'C:\\node\\node.exe', (p) => p === exe);
+  assert.equal(inv.command, exe);
+  assert.equal(inv.nodeBased, false);
+  assert.deepEqual(inv.argsPrefix, []);
+});
+
+test('windowsDshInvocation：неизвестный shim без JS entry не запускается', () => {
+  assert.throws(
+    () => windowsDshInvocation('C:\\other\\dsh.cmd', 'C:\\node\\node.exe', () => false),
+    (err: Error & { code?: string }) => err.code === 'DSH_ENTRY_NOT_FOUND',
+  );
 });
 test('startDsh 默认追加 --no-open，openInBrowser=true 时不追加（v0.3.0）', () => {
   const calls: { args: string[] }[] = [];

@@ -593,15 +593,31 @@ test('shouldSkipForeignTarget：node_modules 里有一堆别人的包也要放�
   };
   assert.equal(shouldSkipForeignTarget('C:\\Users\\u\\.dsh\\profiles\\node_modules', npmLike), false);
   assert.equal(shouldSkipForeignTarget('/home/u/.dsh/profiles/node_modules', npmLike), false);
+  // Обычный npm shim тоже соседний с `dsh.cmd`, но существующий npm node_modules разрешён.
+  const npmRoot = 'C:/Users/u/AppData/Roaming/npm';
+  const npmModules = `${npmRoot}/node_modules`;
+  const realNpmLayout = {
+    exists: (p: string) => p === npmRoot || p === npmModules,
+    readdir: (p: string) => p === npmModules ? ['@scope', BRIDGE_PACKAGE_NAME] : ['dsh.cmd'],
+  };
+  assert.equal(shouldSkipForeignTarget(npmModules, realNpmLayout), false);
 });
 
-test('shouldSkipForeignTarget：父目录含 .cmd 命令垫片 → 跳过（issue #20 的受害目录）', () => {
+test('shouldSkipForeignTarget：父目录或缺失的 node_modules 祖先含 .cmd 时跳过（issue #20）', () => {
   // 复刻 %APPDATA%\DSH Desktop\host-commands\desktop\bin：被桌面独占，只允许它自己的 dsh.cmd
   const victim = { exists: () => true, readdir: () => ['dsh.cmd'] };
   assert.equal(shouldSkipForeignTarget('C:\\Users\\u\\AppData\\Roaming\\DSH Desktop\\host-commands\\desktop\\bin', victim), true);
   // 大小写不敏感（Windows 实际可能给 .CMD）
   const upper = { exists: () => true, readdir: () => ['DSH.CMD'] };
   assert.equal(shouldSkipForeignTarget('C:\\somewhere\\bin', upper), true);
+
+  // Resolver 已经把 Desktop shim 转成 `bin/node_modules`；中间 node_modules 尚不存在。
+  const desktopBin = 'C:/Users/u/AppData/Roaming/DSH Desktop/host-commands/desktop/bin';
+  const nestedFs = {
+    exists: (p: string) => p === desktopBin,
+    readdir: (p: string) => p === desktopBin ? ['dsh.cmd'] : [],
+  };
+  assert.equal(shouldSkipForeignTarget(`${desktopBin}/node_modules`, nestedFs), true);
 });
 
 test('shouldSkipForeignTarget：父目录不可读 → 保守跳过（不冒写坏他人目录的风险）', () => {
@@ -613,11 +629,12 @@ test('shouldSkipForeignTarget：父目录不可读 → 保守跳过（不冒写�
 });
 
 test('installBridge：父目录被他人占用时不写入其子目录（issue #20 的核心场景）', () => {
-  // 端到端复刻：目标 `…/desktop/bin/dsh-vscode-bridge` 不存在，但父目录 `…/desktop/bin` 里有 dsh.cmd。
-  // 修复前会新建子目录（污染宿主私有目录）；修复后必须跳过。
+  // 端到端复刻 resolver 的真实目标：`…/desktop/bin/node_modules/dsh-vscode-bridge`。
+  // node_modules 不存在，父层 bin 只有 dsh.cmd；必须往上检查并跳过。
   const profile = '/home/u/.dsh/profiles/web';
   const patchPath = `${profile}/cordis.patch.yml`;
   const desktopBin = 'C:\\Users\\u\\AppData\\Roaming\\DSH Desktop\\host-commands\\desktop\\bin';
+  const desktopNodeModules = `${desktopBin}\\node_modules`;
   const memFs = makeMemFs({ [patchPath]: '[]\n' });
   memFs.mkdir(profile);
   const fs: InstallerFs = {
@@ -630,11 +647,11 @@ test('installBridge：父目录被他人占用时不写入其子目录（issue #
     dshHome: '/home/u/.dsh',
     bridgeSourceDir: '/ext/bridge-client',
     fs,
-    npmGlobalNodeModules: desktopBin,
+    npmGlobalNodeModules: desktopNodeModules,
   });
   assert.equal(r.status, 'ok');
   assert.ok(memFs.exists(`${profile}/node_modules/dsh-vscode-bridge/package.json`), 'profiles 位置照常安装');
-  assert.equal(memFs.exists(`${desktopBin}\\dsh-vscode-bridge/package.json`), false, '不得在宿主私有目录里新建条目');
+  assert.equal(memFs.exists(`${desktopNodeModules}/dsh-vscode-bridge/package.json`), false, '不得在宿主私有目录里新建条目');
   assert.equal(fs.readdir(desktopBin).length, 1, '宿主目录条目数不变');
 });
 
@@ -642,7 +659,8 @@ test('installBridge：npm 目标目录含他人产物时跳过该目标，其余
   const profile = '/home/u/.dsh/profiles/web';
   const patchPath = `${profile}/cordis.patch.yml`;
   const desktopBin = 'C:\\Users\\u\\AppData\\Roaming\\DSH Desktop\\host-commands\\desktop\\bin';
-  const desktopBinBridge = `${desktopBin}\\dsh-vscode-bridge`;
+  const desktopNodeModules = `${desktopBin}\\node_modules`;
+  const desktopBinBridge = `${desktopNodeModules}/dsh-vscode-bridge`;
   const memFs = makeMemFs({ [patchPath]: '[]\n' });
   memFs.mkdir(profile);
   // 模拟真实受害目录：父目录里只有桌面自己的 dsh.cmd（子目录不存在）
@@ -656,7 +674,7 @@ test('installBridge：npm 目标目录含他人产物时跳过该目标，其余
     dshHome: '/home/u/.dsh',
     bridgeSourceDir: '/ext/bridge-client',
     fs,
-    npmGlobalNodeModules: desktopBin,
+    npmGlobalNodeModules: desktopNodeModules,
   });
   assert.equal(r.status, 'ok');
   // profiles 双位置照常安装
