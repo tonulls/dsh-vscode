@@ -118,7 +118,7 @@ test('#27 回归：面板缩放仍接线且传参位置正确（0.4.2 保留 iss
 // ——— 文档与测试数一致性 ———
 // README/CHANGELOG 里的测试数在发布流程中被反复手改（326 → 275 → 277 → 283），
 // 极易漏改或写错。这里用"源码里 test( 的静态计数"当基准，把漂移钉死。
-test('README 中英与 CHANGELOG 声明的测试数等于实际测试数', () => {
+test('README на русском и китайском, CHANGELOG: число тестов соответствует фактическому', () => {
   const root = join(__dirname, '..', '..');
   // ① 静态计数：递归 test/ 下所有 *.test.ts 的顶层 test( 调用
   const stack = [join(root, 'test')];
@@ -137,7 +137,7 @@ test('README 中英与 CHANGELOG 声明的测试数等于实际测试数', () =>
   assert.ok(count > 200, `静态计数应达到数百条，实际 ${count}`);
 
   // ② README（中英）在 npm run test 的注释里声明了同一个数字
-  for (const file of ['README.md', 'README.zh.md']) {
+  for (const file of ['README.md', join('docs', 'README.zh.md')]) {
     const text = readFileSync(join(root, file), 'utf8');
     const m = /npm run test\s+# (\d+) /.exec(text);
     assert.ok(m, `${file} 应声明测试数`);
@@ -145,7 +145,7 @@ test('README 中英与 CHANGELOG 声明的测试数等于实际测试数', () =>
   }
 
   // ③ CHANGELOG：0.4.2 段落的 "npm test X/X 全绿" 与 "由 A 降至 X"
-  const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
+  const changelog = readFileSync(join(root, 'docs', 'CHANGELOG.md'), 'utf8');
   const green = /`npm test` (\d+)\/\1 全绿/.exec(changelog);
   assert.ok(green, 'CHANGELOG 应写明 npm test 全绿的数量');
   assert.equal(Number(green[1]), count, 'CHANGELOG 的 npm test 数字应与实际一致');

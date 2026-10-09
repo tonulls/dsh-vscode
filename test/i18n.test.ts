@@ -9,7 +9,10 @@ test('zh-* 语言使用中文文案', () => {
   assert.equal(t('panel.loading'), '正在启动 DSH 服务…');
 });
 
-test('非 zh 语言一律使用英文文案', () => {
+test('俄语使用俄语文案，其他非中文语言使用英文', () => {
+  initI18n('ru-RU');
+  assert.equal(getLang(), 'ru');
+  assert.equal(t('panel.loading'), 'Запуск службы DSH…');
   initI18n('en');
   assert.equal(getLang(), 'en');
   assert.equal(t('panel.loading'), 'Starting DSH service…');

@@ -127,20 +127,74 @@ const messages = {
     'bridge.uninstalled': 'DSH 桥接已卸载，重启 DSH 服务后生效。',
     'bridge.uninstallFailed': '卸载 DSH 桥接失败：{message}',
   },
+  ru: {
+    'panel.loading': 'Запуск службы DSH…',
+    'panel.errorTitle': 'Не удалось запустить службу DSH',
+    'panel.disconnectedTitle': 'Соединение со службой DSH потеряно',
+    'panel.reconnect': 'Подключиться снова',
+    'panel.retry': 'Повторить',
+    'panel.openExternal': 'Открыть в браузере',
+    'panel.remoteDisabled': 'Поддержка SSH Remote отключена. Включите параметр «dsh.remote.enabled» и перезагрузите окно.',
+    'panel.openSettings': 'Открыть настройки',
+    'panel.restart': 'Перезапустить службу',
+    'panel.stop': 'Остановить службу',
+    'panel.copyUrl': 'Копировать URL',
+    'panel.showLogs': 'Показать журнал',
+    'panel.authTitle': 'Для DSH требуется вход через браузер',
+    'panel.authExplain': 'Эта служба DSH запущена не расширением, поэтому оно не может автоматически получить URL запуска. Вставьте URL, который команда dsh web вывела при запуске, чтобы один раз войти в систему (сеанс действует 30 дней).',
+    'panel.authStep1': 'В журнале службы DSH найдите строку, начинающуюся с «dsh web: http://…/?token=…» (вывод терминала; для systemd выполните journalctl -u dsh -n 100).',
+    'panel.authStep2': 'Вставьте полный URL ниже и нажмите «Войти».',
+    'panel.authPlaceholder': 'dsh web: http://127.0.0.1:3080/?token=…',
+    'panel.authHint': 'URL используется один раз для получения сеанса и нигде не сохраняется.',
+    'panel.authSubmit': 'Войти',
+    'panel.authSubmitting': 'Выполняется вход…',
+    'msg.authBadUrl': 'Похоже, это не URL запуска dsh web (ожидается: dsh web: http://127.0.0.1:<порт>/?token=…). Скопируйте его из журнала службы DSH.',
+    'msg.authNeedToken': 'Для этой службы DSH требуется вход через браузер, но в указанном адресе нет одноразового токена. Вставьте полный URL запуска из журнала (строку, начинающуюся с «dsh web: http://…/?token=…»).',
+    'msg.authRejected': 'Не удалось войти: {reason}',
+    'msg.authOk': 'Вход в DSH выполнен. Сеанс действует до 30 дней.',
+    'msg.authMismatch': 'URL указывает на {urlHost}, а запущенная служба DSH находится на {targetHost}. Скопируйте URL из журнала этой службы.',
+    'err.portOccupied': 'Порт {port} занят другой программой. Измените параметр dsh.port в настройках и повторите попытку.',
+    'err.dshNotFound': 'Команда dsh не найдена. Сначала установите DeepSeek Harness.',
+    'err.nodeNotFound': 'Node.js (node.exe) не найден в PATH. Установите Node.js или добавьте его в PATH, затем перезапустите VS Code.',
+    'err.spawnEinval': 'Не удалось запустить dsh: неверные параметры запуска (рабочий каталог: {cwd}). Откройте локальную папку или задайте dsh.executablePath в настройках.',
+    'err.startTimeout': 'Служба не запустилась за {seconds} с. Подробности — в журнале DSH.',
+    'err.startCrashed': 'Служба DSH неожиданно завершилась. Подробности — в журнале DSH.',
+    'err.notRunning': 'Служба DSH не запущена, а автоматический запуск отключён.',
+    'err.loadFailed': 'Не удалось загрузить страницу DSH.',
+    'status.running': 'DSH: работает',
+    'status.starting': 'DSH: запускается',
+    'status.failed': 'DSH: ошибка',
+    'status.stopped': 'DSH: остановлена',
+    'guide.secondaryTitle': 'DSH: два способа открыть панель',
+    'guide.secondaryText': 'Панель DSH доступна по значкам на панели действий и во вспомогательной боковой панели. Нажмите любой из них.',
+    'guide.gotIt': 'Понятно',
+    'info.urlCopied': 'URL скопирован: {url}',
+    'info.notReady': 'Служба DSH ещё не готова.',
+    'info.stopped': 'Служба DSH остановлена.',
+    'msg.portFallback': 'Порт {port} занят другой программой. Для этого сеанса временно используется порт {fallback} (параметр dsh.port не изменён).',
+    'msg.logsCopied': 'Журнал DSH скопирован в буфер обмена. Вставьте его в отчёт об ошибке.',
+    'msg.imageCacheCleaned': 'Удалено временных файлов резервной отправки изображений: {count}.',
+    'bridge.warnDegraded': 'Мост DSH не активен. Недоступны функции: 1) открытие ссылок в браузере; 2) открытие путей к файлам в VS Code. Можно повторить установку моста или отключить это предупреждение.',
+    'bridge.retryNow': 'Повторить установку',
+    'bridge.neverAgain': 'Больше не показывать',
+    'bridge.uninstalled': 'Мост DSH удалён. Перезапустите службу DSH, чтобы изменения вступили в силу.',
+    'bridge.uninstallFailed': 'Не удалось удалить мост DSH: {message}',
+  },
 } as const;
 
 /** 文案键联合类型（en 为键的来源） */
 export type MsgKey = keyof typeof messages.en;
 
-let current: 'zh' | 'en' = 'en';
+let current: 'zh' | 'ru' | 'en' = 'en';
 
 /** 按语言规则初始化（扩展激活时调用一次） */
 export function initI18n(language: string): void {
-  current = language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  const normalized = language.toLowerCase();
+  current = normalized.startsWith('ru') ? 'ru' : normalized.startsWith('zh') ? 'zh' : 'en';
 }
 
 /** 当前语言 */
-export function getLang(): 'zh' | 'en' {
+export function getLang(): 'zh' | 'ru' | 'en' {
   return current;
 }
 

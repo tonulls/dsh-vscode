@@ -18,11 +18,8 @@ Press `F5` in VS Code to launch the Extension Development Host.
 
 ## Conventions
 
-- Commit messages and code comments are written in Chinese.
-- README.md is the English primary version; README.zh.md is the Chinese
-  mirror — update both when changing user-facing docs.
-- Keep runtime i18n keys in sync between `src/i18n.ts` (en/zh) and the
-  static `package.nls*.json` files.
+- Основной README проекта — `../README.md` (русский); английская и китайская версии находятся рядом в `README.EN.md` и `README.zh.md`. Синхронизируйте переводы при изменении пользовательской документации.
+- Сохраняйте runtime-переводы синхронными между `src/i18n.ts` (en/zh/ru) и статическими файлами `package.nls*.json`.
 
 ## Submitting changes
 

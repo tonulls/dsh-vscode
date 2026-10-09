@@ -6,7 +6,7 @@
 [![DSH 社区插件](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.91-blue)](https://code.visualstudio.com/)
 
-**中文** | [English](README.md)
+[Русский](../README.md) | **中文** | [English](README.EN.md)
 
 在 VS Code 中直接使用 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 的网页界面：点击侧边栏图标即可内嵌打开 DSH，自动启动/复用 `dsh web` 服务，代码与 AI 界面同屏，无需再切换终端和浏览器。
 
@@ -14,11 +14,11 @@
 
 ## 📸 界面截图
 
-![DSH for VS Code 界面截图](docs/screenshots/overview.png)
+![DSH for VS Code 界面截图](screenshots/overview.png)
 
 ## 🎬 演示视频
 
-[![如何在 VSCode 中使用 DeepSeek Harness？用 DSH！！（Bilibili）](docs/screenshots/video-cover.jpg)](https://www.bilibili.com/video/BV1p8bD6dE18)
+[![如何在 VSCode 中使用 DeepSeek Harness？用 DSH！！（Bilibili）](screenshots/video-cover.jpg)](https://www.bilibili.com/video/BV1p8bD6dE18)
 
 *B 站 59 秒演示视频：[BV1p8bD6dE18](https://www.bilibili.com/video/BV1p8bD6dE18)*
 
@@ -30,7 +30,7 @@
 - 🚀 **服务自动管理**：自动探测端口——已有 `dsh web` 直接复用，没有则后台静默启动，就绪后自动加载；
 - 🔄 **状态实时同步**：状态栏四态指示（运行中绿 / 启动中黄 / 失败红 / 已停止灰），点击状态栏可开关面板；
 - 🛟 **异常兜底**：端口被占、`dsh` 未安装、启动超时、服务崩溃/失联均有对应提示页与一键重连，绝不白屏；配置端口被其他程序占用时自动改用第一个空闲端口（仅本次会话临时生效）；
-- 🌐 **双语界面**：文案跟随 VS Code 显示语言——中文环境显示中文，其余语言一律英文；
+- 🌐 **多语言界面**：文案跟随 VS Code 显示语言——`ru-*` 显示俄语，`zh-*` 显示简体中文，其余语言显示英文；
 - 📋 **复制/粘贴/右键开箱即用**：修复 VS Code 内嵌环境下（尤其是 macOS）聊天内容无法 `Cmd+C` 复制、`Cmd+V` 粘贴、右键无菜单的问题——面板内置标准编辑快捷键仿真与右键菜单（复制/粘贴/剪切/全选/撤销/重做），普通浏览器打开与原有功能完全不受影响；
 - 🧹 **退出清理**：关闭窗口自动停止插件自启的服务，不留僵尸进程；手动启动的服务永不干预；
 - 🔒 **安全边界**：只连接回环地址（127.0.0.1 / localhost / [::1]），不读取凭据。
@@ -211,7 +211,7 @@ dsh web: http://127.0.0.1:3080/?token=<一次性 token>
 
 ## 🌍 多语言
 
-界面文案跟随 VS Code 显示语言（`Configure Display Language`）：`zh-*` → 简体中文，其余语言 → 英文。
+界面文案跟随 VS Code 显示语言（`Configure Display Language`）：`ru-*` → 俄语，`zh-*` → 简体中文，其余语言 → 英文。
 
 扩展包内提供 `package.nls.json` / `package.nls.zh-cn.json` / `package.nls.zh-hans.json`。
 但在 **VS Code + WSL Remote** 场景实测：即使扩展宿主的 locale 已是 `zh-cn`、本地化文件与键覆盖均正确，设置界面仍显示英文（同一界面里官方 `Remote.*` 扩展为中文）——属该环境的清单本地化限制，非扩展缺陷。因此上文《设置界面中英对照》表作为长期可用的对照方案。

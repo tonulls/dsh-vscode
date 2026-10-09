@@ -1,277 +1,268 @@
 # DSH for VS Code 🐳
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Лицензия: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Fengze233.dsh-vscode-panel?label=Marketplace&color=4D6BFE)](https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel)
-[![GitHub stars](https://img.shields.io/github/stars/Fengze233/dsh-vscode?style=social)](https://github.com/Fengze233/dsh-vscode)
-[![DSH Plugin](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
+[![Звёзды GitHub](https://img.shields.io/github/stars/Fengze233/dsh-vscode?style=social)](https://github.com/Fengze233/dsh-vscode)
+[![Плагин DSH](https://img.shields.io/badge/DSH%20Plugin-dsh--plugin-4D6BFE)](https://github.com/topics/dsh-plugin)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.91-blue)](https://code.visualstudio.com/)
 
-**English** | [中文](README.zh.md)
+**Русский** | [English](docs/README.EN.md) | [中文](docs/README.zh.md)
 
-Use the [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) web UI right inside VS Code: click a sidebar icon to embed DSH, which auto-starts (or reuses) the `dsh web` service — code and AI interface side by side, no more switching between terminal, browser, and IDE.
+Используйте веб-интерфейс [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) прямо в VS Code: нажмите значок на боковой панели, чтобы встроить DSH. Расширение автоматически запустит `dsh web` или подключится к уже работающему сервису — код и интерфейс ИИ будут рядом, без переключения между терминалом, браузером и IDE.
 
-Works with **DSH 0.1.2 and newer**, including its one-time-token browser authentication (auto sign-in, no manual step) — see [DSH ≥0.1.2 authentication](#-dsh-012-authentication--the-local-relay). Older DSH (≤ 0.1.1, no auth) keeps working unchanged.
+Поддерживается **DSH 0.1.2 и новее**, включая авторизацию браузера по одноразовому токену (вход выполняется автоматически) — см. раздел [Авторизация DSH ≥0.1.2 и локальный relay](#-авторизация-dsh-012-и-локальный-relay). Более старые версии DSH (≤ 0.1.1, без авторизации) продолжают работать как раньше.
 
-## 📸 Screenshot
+## 📸 Скриншот
 
-![DSH for VS Code screenshot](docs/screenshots/overview.png)
+![Скриншот DSH for VS Code](docs/screenshots/overview.png)
 
-## 🎬 Demo video
+## 🎬 Видео
 
-[![如何在 VSCode 中使用 DeepSeek Harness？用 DSH！！（Bilibili）](docs/screenshots/video-cover.jpg)](https://www.bilibili.com/video/BV1p8bD6dE18)
+[![Как использовать DeepSeek Harness в VS Code? Используйте DSH! (Bilibili)](docs/screenshots/video-cover.jpg)](https://www.bilibili.com/video/BV1p8bD6dE18)
 
-*59-second demo on Bilibili (Chinese): [BV1p8bD6dE18](https://www.bilibili.com/video/BV1p8bD6dE18)*
+*Демонстрация на Bilibili длительностью 59 секунд: [BV1p8bD6dE18](https://www.bilibili.com/video/BV1p8bD6dE18)*
 
 ---
 
-## ✨ Features
+## ✨ Возможности
 
-- 🖱️ **One-click open**: a DSH whale icon in both the left Activity Bar and the right Secondary Side Bar — click either to embed the DSH page in that sidebar;
-- 🚀 **Automatic service management**: auto-detects the port — reuses an already-running `dsh web`, otherwise starts one silently in the background and loads it once ready;
-- 🔄 **Live status sync**: four-state status bar indicator (running green / starting yellow / failed red / stopped gray); click it to toggle the panel;
-- 🛟 **Error fallbacks**: port occupied, `dsh` missing, start timeout, crash/disconnect — each has a dedicated page with one-click reconnect; if the configured port is taken by another program, the extension temporarily falls back to the first free port for that session, never a blank screen;
-- 🌐 **Bilingual UI**: copy follows the VS Code display language — Chinese for `zh-*`, English otherwise;
-- 📋 **Copy/Paste/Context menu, works out of the box**: fixes the macOS webview quirk where `Cmd+C` / `Cmd+V` and the right-click menu silently fail inside the embedded DSH page — the panel ships its own standard edit shortcut simulation and a context menu (Copy/Paste/Cut/Select All/Undo/Redo), while plain-browser usage and every existing feature stay untouched;
-- 🧹 **Clean exit**: closing the window stops the auto-started service, no zombie processes; manually started services are never touched;
-- 🔒 **Security boundary**: loopback addresses only (127.0.0.1 / localhost / [::1]); no credentials are read.
-- 🔐 **DSH 0.1.2 auth-aware**: the extension parses the one-time launch URL from the service log, exchanges it for DSH's signed browser cookie (valid 30 days, survives service restarts) and serves the panel through a local loopback relay that presents that session for the iframe — so the embedded UI keeps working even though DSH's `SameSite=Strict` cookie can never be used inside a cross-site iframe. A session that expires is re-acquired automatically (a self-started service) or after one paste (an externally started service);
-- 🔝 **Editor title-bar icon**: a DSH whale button sits in the top-right of the editor tab bar (like Claude Code) — one click opens the right-side DSH panel;
-- 🌐 **SSH Remote (opt-in)**: when connected to a remote host, run dsh on the remote and open the panel through a VS Code tunnel (`dsh.remote.enabled`, off by default);
-- 🖼️ **Free image upload**: send images even when the active model has no vision — the image is cached in the workspace and dispatched as a file-path reference, letting the model inspect it with an image tool (files are cleaned up when the panel closes; opt-out via `dsh.image.fallback`);
-- 🪟 **No surprise browser window**: `dsh web` is started with `--no-open` by default (restore with `dsh.openInBrowser`).
+- 🖱️ **Открытие одним нажатием**: значок-кит DSH доступен на левой панели Activity Bar и на правой Secondary Side Bar; нажатие открывает DSH в соответствующей панели.
+- 🚀 **Автоматическое управление сервисом**: расширение определяет порт, использует уже работающий `dsh web` или незаметно запускает новый и загружает страницу после готовности.
+- 🔄 **Синхронизация статуса**: индикатор в строке состояния показывает четыре состояния (работает — зелёный, запускается — жёлтый, ошибка — красный, остановлен — серый); нажмите его, чтобы открыть или закрыть панель.
+- 🛟 **Обработка ошибок**: для занятого порта, отсутствующей команды `dsh`, тайм-аута запуска и падения/отключения сервиса предусмотрены отдельные страницы с быстрым переподключением. Если заданный порт занят другой программой, на текущий сеанс выбирается первый свободный порт — вместо пустого экрана.
+- 🌐 **Локализованный интерфейс**: язык текста соответствует языку VS Code: русский для `ru-*`, китайский для `zh-*`, английский для остальных.
+- 📋 **Копирование, вставка и контекстное меню**: исправлена проблема webview в macOS, где `Cmd+C`, `Cmd+V` и контекстное меню могли не работать во встроенной странице DSH. Панель предоставляет стандартные команды редактирования (копировать, вставить, вырезать, выделить всё, отменить, повторить); обычный браузер и остальные функции не затрагиваются.
+- 🧹 **Чистое завершение**: при закрытии окна останавливается запущенный расширением сервис; вручную запущенные сервисы не затрагиваются.
+- 🔒 **Граница безопасности**: подключение только к loopback-адресам (127.0.0.1 / localhost / [::1]); учётные данные не читаются.
+- 🔐 **Поддержка авторизации DSH 0.1.2**: расширение получает одноразовую ссылку запуска из журнала сервиса, обменивает её на подписанную cookie сессии (действует 30 дней, переживает перезапуск сервиса) и использует локальный loopback relay для встроенной панели. По истечении сессии авторизация автоматически обновляется для запущенного расширением сервиса; для внешнего сервиса потребуется повторный ввод ссылки.
+- 🔝 **Значок в заголовке редактора**: кнопка DSH находится справа в строке вкладок редактора и открывает панель DSH справа.
+- 🌐 **SSH Remote (по желанию)**: можно запускать DSH на удалённом компьютере и показывать панель через туннель VS Code (`dsh.remote.enabled`, по умолчанию выключено).
+- 🖼️ **Загрузка изображений**: изображения можно отправлять и моделям без поддержки зрения. Файл временно сохраняется в рабочей области, а в запрос передаётся ссылка-путь для инструмента анализа изображений; при закрытии панели файлы очищаются. Функцию можно отключить через `dsh.image.fallback`.
+- 🪟 **Без неожиданного открытия браузера**: по умолчанию `dsh web` запускается с `--no-open`; поведение можно изменить через `dsh.openInBrowser`.
 
-## 📥 Installation
+## 📥 Установка
 
-**Option 1: Marketplace (recommended)**
+**Вариант 1: Marketplace (рекомендуется)**
 
-Search for `DSH` (publisher Fengze233) in the VS Code Extensions view, or run:
+Найдите `DSH` (издатель Fengze233) в разделе расширений VS Code или выполните:
 
 ```bash
 code --install-extension Fengze233.dsh-vscode-panel
 ```
 
-Marketplace page: <https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel>
+Страница Marketplace: <https://marketplace.visualstudio.com/items?itemName=Fengze233.dsh-vscode-panel>
 
-**Option 2: .vsix package**
+**Вариант 2: пакет .vsix**
 
-1. Download the latest `dsh-vscode.vsix` from [Releases](https://github.com/Fengze233/dsh-vscode/releases);
-2. In VS Code press `Ctrl+Shift+P` → run `Extensions: Install from VSIX...` → select the file;
-3. Reload the window (`Developer: Reload Window`).
+1. Скачайте последнюю версию `dsh-vscode.vsix` со страницы [Releases](https://github.com/Fengze233/dsh-vscode/releases).
+2. В VS Code нажмите `Ctrl+Shift+P` → выполните `Extensions: Install from VSIX...` → выберите файл.
+3. Перезагрузите окно командой `Developer: Reload Window`.
 
-**Option 3: Build from source**
+**Вариант 3: сборка из исходного кода**
 
 ```bash
 git clone https://github.com/Fengze233/dsh-vscode.git
 cd dsh-vscode
 npm install
-npm run package        # produces dsh-vscode.vsix, then install as in Option 2
+npm run package        # создаёт dsh-vscode.vsix; установите его способом 2
 ```
 
-**Prerequisite**: the `dsh` CLI from [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) must be installed and on your PATH (the extension detects it and shows a hint if missing).
+**Требование**: CLI `dsh` из [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) должен быть установлен и доступен через PATH. Расширение проверяет его наличие и покажет подсказку, если команда не найдена.
 
-## 🚀 Usage
+## 🚀 Использование
 
-1. After installation, a DSH whale icon appears in both the left Activity Bar and the right Secondary Side Bar;
-2. Click either icon: the extension auto-starts (or reuses) `dsh web` and embeds the DSH page in that sidebar;
-   - Click the **right** icon → the panel opens on the right, leaving the file explorer untouched;
-   - If `dsh.port` is occupied by another program, the extension automatically switches to the first free port for this session only (your setting is unchanged; a notification tells you the temporary port);
-3. Panel title bar buttons: `Open in Browser` `Restart Service` `Stop Service` `Copy URL` `Show Logs`;
-4. The bottom status bar shows the service status; click it to toggle the panel.
+1. После установки значок-кит DSH появится на левой Activity Bar и правой Secondary Side Bar.
+2. Нажмите любой значок: расширение запустит `dsh web` или подключится к уже работающему сервису и встроит страницу в соответствующую панель.
+   - Правая кнопка открывает панель справа, не занимая место обозревателя файлов.
+   - Если порт `dsh.port` занят другой программой, расширение временно выберет первый свободный порт; настройка останется без изменений, а уведомление сообщит временный порт.
+3. Кнопки заголовка панели: открыть в браузере, перезапустить сервис, остановить сервис, скопировать URL и показать журнал.
+4. Строка состояния внизу показывает состояние сервиса; нажмите её, чтобы переключить панель.
 
-### Command palette (prefixed `DSH:`)
+### Палитра команд (`DSH:`)
 
-| Command | Description |
+| Команда | Описание |
 |---|---|
-| `DSH: Open Panel` | Open the left panel |
-| `DSH: Open in Secondary Side Bar` | Open the right panel |
-| `DSH: Open in Browser` | Open the DSH page in the system browser |
-| `DSH: Restart Service` | Restart the extension-managed service |
-| `DSH: Stop Service` | Stop the extension-started service |
-| `DSH: Copy URL` | Copy the DSH page URL |
-| `DSH: Show Logs` | Open the extension log output channel |
-| `DSH: Copy Logs` | Copy the full DSH log (environment info + service log) to the clipboard for bug reports |
-| `DSH: Retry Bridge Install` | Reinstall the bridge and restart the service |
-| `DSH: Uninstall Bridge` | Remove the bridge package and restore `cordis.patch.yml` |
+| `DSH: Open Panel` | Открыть левую панель |
+| `DSH: Open in Secondary Side Bar` | Открыть правую панель |
+| `DSH: Open in Browser` | Открыть страницу DSH в системном браузере |
+| `DSH: Restart Service` | Перезапустить сервис, управляемый расширением |
+| `DSH: Stop Service` | Остановить запущенный расширением сервис |
+| `DSH: Copy URL` | Скопировать URL страницы DSH |
+| `DSH: Show Logs` | Открыть канал журнала расширения |
+| `DSH: Copy Logs` | Скопировать полный журнал DSH с данными окружения для сообщения об ошибке |
+| `DSH: Retry Bridge Install` | Переустановить bridge и перезапустить сервис |
+| `DSH: Uninstall Bridge` | Удалить bridge и восстановить `cordis.patch.yml` |
 
-## 🔐 DSH ≥0.1.2 authentication & the local relay
+## 🔐 Авторизация DSH ≥0.1.2 и локальный relay
 
-DSH 0.1.2 introduced mandatory browser authentication. On startup `dsh web` prints a one-time launch URL:
+В DSH 0.1.2 добавлена обязательная авторизация браузера. При запуске `dsh web` выводит одноразовую ссылку, например:
 
 ```
-dsh web: http://127.0.0.1:3080/?token=<one-time token>
+dsh web: http://127.0.0.1:3080/?token=<одноразовый-токен>
 ```
 
-Visiting it returns `303` plus a signed session cookie (`HttpOnly; SameSite=Strict`, bound to the request `Host`, 30-day lifetime). Every page and every `/api` call then requires that cookie; without it DSH answers `401 dsh web authentication required`.
+Переход по ссылке возвращает ответ `303` и подписанную cookie сессии (`HttpOnly; SameSite=Strict`, привязанную к заголовку `Host`, сроком на 30 дней). Для доступа к страницам и API нужна эта cookie; без неё DSH отвечает `401 dsh web authentication required`.
 
-**Why a relay is needed.** The panel is a cross-site iframe (its top-level document is `vscode-webview://…`), and browsers never send a `SameSite=Strict` cookie in that context — verified empirically with three different top-level document shapes. So the iframe cannot log itself in, no matter what URL it loads.
+**Зачем нужен relay.** Панель работает во встроенном cross-site iframe с документом верхнего уровня `vscode-webview://…`. Браузер не отправляет в таком контексте cookie `SameSite=Strict`, поэтому iframe не может самостоятельно авторизоваться.
 
-**What the extension does** (all automatic for a service it started itself):
+**Что делает расширение** (автоматически для запущенного им сервиса):
 
-1. Recognizes `401/403` with a `dsh web` body marker as *“DSH is running and needs a login”* instead of *“port occupied”* (this is what previously produced the confusing “service not ready within 15s / port occupied” loops);
-2. Parses the launch URL from the child process output (token masked in the log, never echoed in errors);
-3. Exchanges it once for the session cookie and stores it in the extension's private storage, keyed by `host:port` (30 days; a service restart does not invalidate it);
-4. Runs a **loopback relay** (random port on `127.0.0.1`): the panel iframe loads the relay, which forwards all traffic to `dsh web` while injecting the session cookie and rewriting `Host`, and adapts DSH's `/api` browser-trust fence (the fence requires `Origin.host === Host` and rejects `Sec-Fetch-Site: cross-site`, neither of which can hold behind a relay — the relay strips those browser-origin headers, acting as the trusted local intermediary it is). Uploads, SSE streams and WebSocket upgrades are forwarded as streams;
-5. If the session ever expires (or DSH's credentials are reset), the relay reports the `401` upstream and the extension re-acquires the session automatically (self-started service) or shows the sign-in page again.
+1. Отличает ответ `401/403` с маркером DSH от ситуации, когда порт занят посторонней программой.
+2. Извлекает ссылку запуска из вывода дочернего процесса; токен скрывается в журнале и не попадает в сообщения об ошибках.
+3. Один раз обменивает ссылку на cookie сессии и хранит её в приватном хранилище расширения по ключу `host:port` в течение 30 дней. Перезапуск сервиса сессию не аннулирует.
+4. Запускает **loopback relay** на случайном порту `127.0.0.1`. Панель подключается к нему, а relay пересылает запросы в `dsh web`, добавляет cookie и переписывает `Host`. Он также адаптирует защиту DSH API от браузерных запросов другого источника: удаляет конфликтующие заголовки браузерного источника и пересылает загрузки, SSE-потоки и WebSocket-соединения.
+5. Если сессия истекла или учётные данные DSH сброшены, relay сообщает об ответе `401`; расширение получает новую сессию автоматически для собственного сервиса либо снова показывает страницу входа.
 
-**If you start DSH yourself** (systemd, a terminal), the extension cannot read that process's log, so the panel shows a one-time **sign-in page**: paste the launch URL from the service log (e.g. `journalctl -u dsh -n 100`). One paste lasts up to 30 days, and a service restart does *not* require pasting again. You can also paste a bare `http://127.0.0.1:3080/` address — for a DSH ≤ 0.1.1 (no auth) service that is enough.
+**Если DSH запущен вручную** (например, через systemd или терминал), расширение не может прочитать журнал чужого процесса. При первом входе вставьте одноразовую ссылку запуска со страницы журнала сервиса (например, `journalctl -u dsh -n 100`). Обычно это нужно сделать один раз на срок до 30 дней. Можно также вставить обычный адрес `http://127.0.0.1:3080/` — этого достаточно для DSH ≤0.1.1 без авторизации.
 
-**Context injection uses the same relay**: the file-context commands (`DSH: Add Current File to Context`, ask/send-selection, auto-follow) call DSH's `/api` through the local relay too, so they carry the session cookie and pass the browser-trust fence automatically; if the panel has not finished signing in yet, they wait up to 5 seconds before warning.
+**Передача контекста** использует тот же relay: команды добавления файла, отправки выделенного фрагмента и автоматического сопровождения вызывают API DSH через него. Если панель ещё не завершила вход, команды ждут до пяти секунд.
 
-**Exposure of the relay**: it listens on `127.0.0.1` only and holds a 30-day session, so any local process (including other local users) that finds the port can drive that session — the same exposure as a DSH ≤ 0.1.1 service listening on `127.0.0.1:3080` with no authentication at all, and narrower in practice (the port is random and must be scanned). 0.1.2's authentication protects against network exposure and cross-site browser contexts; the relay does not reintroduce network exposure.
+**Доступность relay**: он слушает только `127.0.0.1` и хранит сессию до 30 дней. Поэтому локальный процесс, обнаруживший случайный порт, может использовать эту сессию. Relay не открывает сервис для сети; DSH 0.1.2 защищает его от сетевого доступа и межсайтовых браузерных контекстов.
 
-## 🔗 Bridge integration
+## 🔗 Интеграция Bridge
 
-After installation, the extension installs its own bridge package `dsh-vscode-bridge` into DSH's official client-plugin extension point under your DSH user directory, enabling three integrations:
+После установки расширение размещает пакет `dsh-vscode-bridge` в официальной точке расширения клиентских плагинов DSH в пользовательском каталоге. Bridge обеспечивает:
 
-- 🔗 **External links**: clicking a link in the panel opens it in your system browser (instead of being trapped inside the iframe);
-- 📂 **File jumps**: clicking a file path in the panel opens the file in VS Code;
-- 📋 **Clipboard copy**: copy buttons inside DSH (such as code-block copy) are routed through the extension host, working around VS Code's clipboard permission block for cross-origin iframes inside webviews.
-- ↩️ **Undo/redo (macOS Cmd+Z / Cmd+Shift+Z, Windows Ctrl+Z / Ctrl+Y)**: VS Code swallows standard shortcuts in nested iframes, and DSH's input is a React-controlled field whose native undo stack is empty, so `execCommand('undo')` no-ops. After handshake the bridge keeps a **manual undo/redo stack** per editable element (consecutive typing grouped into one step per 400ms) — native undo is preferred when it works, manual fallback otherwise (fixes issue #6 "Cmd+Z undo doesn't work").
+- 🔗 **Внешние ссылки**: ссылки из панели открываются в системном браузере.
+- 📂 **Переход к файлу**: нажатие на путь к файлу открывает его в VS Code.
+- 📋 **Буфер обмена**: команды копирования в DSH (например, копирование блока кода) проходят через host расширения, обходя ограничения clipboard во cross-origin iframe.
+- ↩️ **Отмена и повтор**: ручной стек отмены/повтора для редактируемых элементов исправляет перехват VS Code стандартных сочетаний клавиш в iframe (macOS `Cmd+Z` / `Cmd+Shift+Z`, Windows `Ctrl+Z` / `Ctrl+Y`). Последовательный ввод объединяется в один шаг в пределах 400 мс.
 
-### Install / uninstall mechanism (transparency disclosure)
+### Установка и удаление
 
-To let the DSH page communicate with VS Code, the extension will:
+Расширение устанавливает bridge в `$DSH_HOME/profiles/web` (по умолчанию `~/.dsh/profiles/web`) через официальный механизм клиентских плагинов DSH и добавляет помеченную запись `insert:` в `cordis.patch.yml`. Изменяется только пользовательский каталог, файлы установки DSH не затрагиваются.
 
-1. Install its bridge package `dsh-vscode-bridge` into your DSH user directory (`$DSH_HOME/profiles/web`, default `~/.dsh/profiles/web`) via DSH's official client-plugin extension point;
-2. Write a marked `insert:` entry (wrapped in `# dsh-vscode-bridge: begin` / `# dsh-vscode-bridge: end`) into `cordis.patch.yml`, registering the bridge as a DSH client plugin — writing only to the user directory and never touching the DSH installation directory.
+Удалить bridge можно командой `DSH: Uninstall Bridge` либо удалив расширение VS Code (при удалении выполняется best-effort очистка). Версия bridge всегда совпадает с версией расширения; при различии версии или содержимого `client.js` bridge устанавливается заново.
 
-To remove, either way works:
-   - **Uninstall the extension**: VS Code runs the package's `uninstall` hook automatically, removing the marked entry and the bridge directory (best-effort — it never blocks the uninstall);
-   - **Remove only the bridge**: run `DSH: Uninstall Bridge` for the same result.
+### Настройки Bridge
 
-> Versioning: the bridge package version is **always identical to the extension version** (the two ship together in one vsix to the marketplace); the installer force-reinstalls the bridge whenever the bundled version differs from the installed one, so logic updates always reach the user.
-
-### Bridge-related settings (`dsh.*`)
-
-| Setting | Default | Description |
+| Настройка | По умолчанию | Описание |
 |---|---|---|
-| `dsh.bridge.enabled` | `true` | Enable the bridge (when off: no install, no injection, no warning; the three integrations are unavailable) |
-| `dsh.workspaceRootIndex` | `0` | For multi-root workspaces: which root to use as the `dsh web` process working directory (out-of-range falls back to the first) |
-| `dsh.bridge.silenceWarning` | `false` | Suppress the bridge degradation warning |
+| `dsh.bridge.enabled` | `true` | Включает bridge; при выключении он не устанавливается и его интеграции недоступны |
+| `dsh.workspaceRootIndex` | `0` | Индекс корня рабочей области для много корневых рабочих областей |
+| `dsh.bridge.silenceWarning` | `false` | Отключает предупреждение о недоступности bridge |
 
-### Degradation behavior
+Bridge действует только во встроенной панели. Если он не установлен или неактивен, DSH остаётся доступен; недоступны только перечисленные интеграции. При запуске показывается однократное предупреждение с действиями повторной установки или отключения предупреждений.
 
-The bridge only works inside the panel. If it is inactive (e.g. you open the DSH page in a browser, or the install failed), the panel remains **fully usable** — only the three integrations above are unavailable; a one-time startup warning (with "Retry Install" / "Don't Show Again") is shown.
+## 🆕 Новое в v0.4.0
 
-## 🆕 What's new in v0.4.0
+- Поддержка авторизации браузера DSH 0.1.2: автоматический вход по ссылке запуска и локальный relay; для внешнего сервиса предусмотрен однократный ввод ссылки.
+- Исправлена ошибка цикла «сервис не готов за 15 секунд / порт занят»: ответ `401` авторизованного DSH распознаётся как запрос входа, а не как чужая программа на порту.
+- Исправлен ответ `/api 403` во встроенной панели (например, ошибки загрузки списка провайдеров, рабочих областей или сессий): relay адаптирует браузерные заголовки.
+- Исправлена отправка изображений с DSH 0.1.2: bridge поддерживает оба диалекта RPC, включая `session/prompt`, обёртку `payload.args.request` и код отказа `session/attachment-invalid`.
+- Исправления WSL Remote (#13): рукопожатие больше не зависит от события `load` iframe; origin в `postMessage` учитывает переписывание service worker; CSP и тайм-аут согласования настроены для типов удалённого окружения.
+- Версия `dsh` в заголовке окружения теперь показывается также в Linux и macOS; поиск пакета учитывает символические ссылки.
 
-- **DSH 0.1.2 support (browser authentication)**: automatic sign-in (launch-URL capture → session exchange → 30-day cookie) plus a loopback relay so the embedded panel keeps working under DSH's `SameSite=Strict` session model; externally started services get a one-time paste page. See [DSH ≥0.1.2 authentication](#-dsh-012-authentication--the-local-relay).
-- **Fixed the “service not ready within 15s / port occupied” loop** on DSH 0.1.2: an authenticated `401` is now recognized as *DSH is running and needs a login* instead of a foreign program squatting the port.
-- **Fixed `/api` 403 inside the panel** (“failed to load provider catalog”, empty workspace/session lists): the relay adapts DSH's browser-trust fence (`Origin`/`Sec-Fetch-*`) as a trusted local intermediary.
-- **Fixed image fallback on DSH 0.1.2** (images could not be sent at all): the bridge now speaks both RPC dialects — slash endpoints (`session/prompt`), `payload.args.request` wrapping, and the `session/attachment-invalid` rejection code.
-- **WSL Remote fixes** (issue #13): handshake no longer depends on the iframe `load` event, `postMessage` uses `'*'` (the webview service worker rewrites the iframe origin), CSP `frame-src` is derived from the final frame URL only, WSL is classified separately from SSH-style remotes (localhost direct, no tunnel) and the handshake timeout is widened per remote class.
-- **Environment header now shows the dsh version on Linux/macOS too** (symbolic-link aware package lookup).
+## 🆕 Новое в v0.3.0
 
-## 🆕 What's new in v0.3.0
+- Значок DSH в правой части строки заголовка редактора открывает правую панель.
+- Поддержка SSH Remote: при включённой `dsh.remote.enabled` расширение запускает или использует DSH на удалённом компьютере и показывает панель через туннель VS Code.
+- Загрузка изображений работает и с моделями без зрения: файл временно сохраняется в рабочей области и передаётся как текстовая ссылка `image: <absolute-path>`. Модели с поддержкой изображений используют обычную загрузку.
+- Браузер больше не открывается автоматически; вернуть это поведение можно через `dsh.openInBrowser`.
 
-- **Top-right DSH icon**: the whale button in the editor title bar opens the right-side panel (command `DSH: Open Right Panel`). The icon is the **original whale on a white background** (`whale-icon-bg.svg`), clearly visible in both dark and light themes; the activity bar and secondary sidebar keep the original whale icon.
-- **SSH Remote**: with `dsh.remote.enabled` on, the extension runs on the remote host, starts/reuses `dsh` there, and shows the panel through a VS Code tunnel — your local VS Code window stays clean and the remote service stays on `127.0.0.1`.
-- **Image upload works seamlessly even for non-vision models**: attach images freely in the dialog. When the active model has no image input, the image is saved into your workspace and the message is sent back out as the original text plus a `image: <absolute-path>` reference — no error, no popup; the model inspects the file with its own image tool and answers normally. Vision-capable models keep the native image upload untouched.
-- **No browser auto-open**: `dsh web` is started with `--no-open`, so the plugin no longer pops a browser window; turn that back on with `dsh.openInBrowser`.
+## ⚙️ Настройки (`dsh.*`)
 
-## ⚙️ Settings (`dsh.*`)
+| Настройка | По умолчанию | Описание |
+|---|---:|---|
+| `dsh.port` | `3080` | Предпочтительный порт для обнаружения и запуска сервиса |
+| `dsh.host` | `127.0.0.1` | Адрес сервиса; разрешены только loopback-адреса |
+| `dsh.autoStart` | `true` | Запускать сервис, если он ещё не работает |
+| `dsh.stopOnExit` | `true` | Останавливать запущенный расширением сервис при закрытии последнего окна |
+| `dsh.extraArgs` | `[]` | Дополнительные аргументы для `dsh web` |
+| `dsh.executablePath` | `""` | Путь к исполняемому файлу `dsh` (`dsh.cmd` в Windows); пустое значение — поиск в PATH |
+| `dsh.openInBrowser` | `false` | Открывать DSH в браузере после запуска; при выключении передаётся `--no-open` |
+| `dsh.remote.enabled` | `false` | Включить SSH Remote, WSL, Dev Containers и Codespaces; после изменения требуется перезагрузка окна |
+| `dsh.image.fallback` | `true` | Отправлять изображения как ссылки на файлы, если активная модель не поддерживает зрение |
+| `dsh.startTimeoutMs` | `45000` | Ожидание готовности сервиса в миллисекундах (5000–600000); увеличьте значение на медленных компьютерах |
+| `dsh.env` | `{}` | Дополнительные переменные среды для дочернего процесса DSH |
+| `dsh.useEnvProxy` | `false` | Добавлять `--use-env-proxy` в `NODE_OPTIONS`, сохраняя имеющиеся параметры |
+| `dsh.panel.zoomLevel` | `1` | Масштаб встроенной страницы: 0.5–1.5 с шагом 0.05 |
 
-| Setting | Default | Description |
-|---|---|---|
-| `dsh.port` | `3080` | Desired port (used for both detection and startup) |
-| `dsh.host` | `127.0.0.1` | Service address (loopback only) |
-| `dsh.autoStart` | `true` | Auto-start the service when it is not running |
-| `dsh.stopOnExit` | `true` | Stop the extension-started service when the last window closes |
-| `dsh.extraArgs` | `[]` | Extra arguments appended when starting `dsh web` |
-| `dsh.executablePath` | `""` | Absolute path to the `dsh` executable (`dsh.cmd` on Windows); empty = look up on PATH |
-| `dsh.openInBrowser` | `false` | Open the DSH page in the default browser after the service starts (when off, `--no-open` is passed to `dsh web`) |
-| `dsh.remote.enabled` | `false` | Enable remote scenarios (SSH Remote / WSL / Dev Containers / Codespaces): run dsh on the remote and open the panel through a VS Code tunnel (off by default; reload the window after enabling) |
-| `dsh.image.fallback` | `true` | Send attached images as file-path references when the active model has no vision, instead of failing (files are cached in the session working directory and removed when the panel closes) |
-| `dsh.startTimeoutMs` | `45000` | How long to wait for `dsh web` to become ready, in milliseconds (5000–600000). Raise it on slow machines (Windows cold start measured at 17–23 s); this is the first knob to turn when the log says the service was not ready in time although it did start |
-| `dsh.env` | `{}` | Extra environment variables injected into the DSH child process (merged with the parent environment). Typical use on proxy networks: `{"NODE_OPTIONS":"--use-env-proxy"}` |
-| `dsh.useEnvProxy` | `false` | Append `--use-env-proxy` to the child process's `NODE_OPTIONS` (existing options are kept). Enable it when the model API is only reachable through an HTTP/HTTPS proxy |
-| `dsh.panel.zoomLevel` | `1` | Zoom of the embedded page: pick `0.5`–`1.5` from the dropdown (0.05 steps); finer values via `settings.json` |
+## 🌍 Локализация
 
-## 🌍 Localization
+Текст интерфейса зависит от языка отображения VS Code (`Configure Display Language`): `ru-*` — русский, `zh-*` — упрощённый китайский, остальные языки — английский.
 
-UI copy follows the VS Code display language (`Configure Display Language`): `zh-*` → Simplified Chinese, anything else → English.
+## 🧑‍💻 Разработка
 
-## 🧑‍💻 Development
-
-Requirements: Node.js ≥ 22, VS Code ≥ 1.91.
+Требования: Node.js ≥ 22, VS Code ≥ 1.91.
 
 ```bash
 npm install
-npm run test          # 284 unit/integration tests (including real dsh web flows: service lifecycle, auth session)
-npm run compile       # builds out/extension.js
-npm run watch         # watch build
-npm run typecheck     # type check
-npm run package       # package .vsix
+npm run test          # 284 модульных/интеграционных теста, включая реальные сценарии dsh web
+npm run compile       # собирает out/extension.js
+npm run watch         # сборка при изменениях
+npm run typecheck     # проверка типов
+npm run package       # упаковка .vsix
 ```
 
-Debugging: open this folder in VS Code and press `F5` to launch the Extension Development Host.
+Для отладки откройте каталог в VS Code и нажмите `F5`, чтобы запустить Extension Development Host.
 
-```
+```text
 src/
-├── extension.ts          # entry: assembly and command registration
-├── i18n.ts               # runtime copy dictionary (zh-* Chinese / otherwise English)
-├── config.ts             # settings normalization (loopback whitelist)
+├── extension.ts          # точка входа: сборка расширения и регистрация команд
+├── i18n.ts               # словари интерфейса (ru-*, zh-*, остальные — английский)
+├── config.ts             # нормализация настроек и whitelist loopback
 ├── service/
-│   ├── detect.ts         # port probing (DSH marker detection)
-│   ├── process.ts        # cross-platform subprocess wrapper (dsh / dsh.cmd)
-│   └── manager.ts        # service manager state machine (core)
-├── bridge/               # bridge: installer, handshake host, message handling, status
+│   ├── detect.ts         # проверка порта и обнаружение DSH
+│   ├── process.ts        # кроссплатформенный запуск dsh / dsh.cmd
+│   └── manager.ts        # автомат состояний менеджера сервиса
+├── bridge/               # установка bridge, handshake и обработка сообщений
 ├── panel/
-│   ├── html.ts           # panel page templates (minimal CSP)
-│   └── provider.ts       # WebviewViewProvider (iframe + placeholder pages)
-├── workspaceRoot.ts      # multi-root workspace resolution
-└── statusbar.ts          # status bar controller
+│   ├── html.ts           # шаблоны страниц панели с минимальной CSP
+│   └── provider.ts       # WebviewViewProvider, iframe и страницы-заглушки
+├── workspaceRoot.ts      # выбор корня много корневой рабочей области
+└── statusbar.ts          # контроллер строки состояния
 ```
 
-## 🧭 Known limitations
+## 🧭 Известные ограничения
 
-- The colored icon on the "Get Started with DSH" walkthrough card comes from Marketplace gallery data and only appears after the extension is published (the card itself works regardless);
-- VS Code platform rule: the left icon opens the left panel, the right icon opens the right panel — the left icon cannot open the right panel.
-- SSH Remote: the extension must also be installed on the remote (VS Code prompts for it); the tunnel appears in the Ports view and can be closed by the user (the plugin re-creates it on the next ready).
-- Image fallback caches the image files under the **workspace root** — **an open workspace folder is required** (with no folder open, images cannot be cached and no fallback happens). **Temp images are deleted as soon as the model has seen them**: the previous batch is removed the moment the next message is sent in the same session (the model already read it and answered); if no further message comes, a ~2-minute TTL auto-deletes them; conversation create/switch/delete, panel close, page unload and extension deactivate also clean up (best-effort). On activation the extension additionally sweeps any orphaned `dsh-imgcache-*` files left by an earlier session (VS Code restarts lose the in-memory registry), and you can always run the **`DSH: Clean Up Image Cache`** command to purge them manually.
-- **Verifying the bridge was updated**: in the DSH panel DevTools console you should see `[dsh-vscode-bridge] handshake ok, **v0.4.0**, imageFallback=true` and, after sending an image, `image fallback: 已把图片改为地址随消息重发（N 张）: …`. If it still shows an older version, the bridge was not reinstalled — restart the DSH service (the vsix ships bridge `0.4.0`; the installer force-reinstalls on version mismatch **or on a `client.js` content difference**, so same-version repackaging also refreshes it).
-- **Externally started DSH (≥ 0.1.2)**: the extension cannot read another process's log, so the first sign-in needs one paste of the launch URL (then 30 days, no repeats) — see [DSH ≥0.1.2 authentication](#-dsh-012-authentication--the-local-relay).
-- **Narrow-viewport CJK caret (upstream)**: in a ~300–400px wide panel the text caret can land inside the last CJK character. This is a DSH web-frontend issue (tracked as [issue #9](https://github.com/Fengze233/dsh-vscode/issues/9)); the composer was rewritten upstream in 0.1.2, and this extension cannot patch DSH's page code — the investigation is documented in that issue.
-- `--no-open` is passed to `dsh web` by default, unless `dsh.extraArgs` or `dsh.openInBrowser` explicitly opts back in to opening the browser.
+- Цветной значок карточки «Get Started with DSH» берётся из данных Marketplace и появляется после публикации; сама карточка работает и без значка.
+- Ограничение VS Code: левая кнопка открывает левую панель, правая — правую; левая кнопка не может открыть правую панель.
+- Для SSH Remote расширение также нужно установить на удалённом компьютере. Туннель виден в представлении Ports; после его закрытия расширение создаст его заново при следующем запуске сервиса.
+- Резервная отправка изображений требует открытой рабочей области и сохраняет временные файлы в её корне. Предыдущие файлы удаляются при следующей отправке; если новых сообщений нет — примерно через две минуты. Очистка также происходит при переключении/закрытии беседы, закрытии панели, выгрузке страницы и остановке расширения (best effort). При запуске удаляются оставшиеся файлы `dsh-imgcache-*`; командой `DSH: Clean Up Image Cache` их можно удалить вручную.
+- Для проверки версии bridge в консоли DevTools панели ищите `[dsh-vscode-bridge] handshake ok` с номером версии и `imageFallback=true`. После отправки изображения появится сообщение о преобразовании. При устаревшей версии перезапустите сервис DSH; установщик переустанавливает bridge при несовпадении версии или содержимого `client.js`.
+- Для вручную запущенного DSH ≥0.1.2 расширение не может прочитать журнал другого процесса: при первом входе необходимо вставить ссылку запуска. См. раздел авторизации.
+- Узкий курсор в CJK-тексте при ширине панели около 300–400 px — проблема редактора DSH, зарегистрированная в [issue #9](https://github.com/Fengze233/dsh-vscode/issues/9); расширение не изменяет код страницы DSH.
+- По умолчанию `dsh web` получает `--no-open`; аргументы `dsh.extraArgs` или `dsh.openInBrowser` могут изменить это поведение.
 
-## 🌐 Community
+## 🌐 Сообщество
 
-This is a DeepSeek Harness community plugin (topic: [`dsh-plugin`](https://github.com/topics/dsh-plugin)).
+Это community-плагин DeepSeek Harness (тема [`dsh-plugin`](https://github.com/topics/dsh-plugin)).
 
-- DSH official repo: <https://github.com/deepseek-ai/deepseek-harness>
-- Issue tracker: <https://github.com/Fengze233/dsh-vscode/issues>
-- DSH community discussions: <https://github.com/deepseek-ai/deepseek-harness/discussions>
+- Официальный репозиторий DSH: <https://github.com/deepseek-ai/deepseek-harness>
+- Сообщить об ошибке: <https://github.com/Fengze233/dsh-vscode/issues>
+- Обсуждения DSH: <https://github.com/deepseek-ai/deepseek-harness/discussions>
 
-## 🙏 Contributors & Acknowledgements
+## 🙏 Участники и благодарности
 
-Many improvements here came from the community. Contributions are grouped by type (IDs link to the corresponding issue/PR in this repository):
+Многие улучшения появились благодаря сообществу. Идентификаторы ведут к соответствующим issue/PR этого репозитория.
 
-### Code contributions
+### Вклад в код
 
-| Contributor | Contribution | Ref |
+| Участник | Вклад | Ссылка |
 |---|---|---|
-| (none yet) | No community code contributions are merged in the current release | — |
+| — | В текущем выпуске нет объединённых вкладов сообщества в код | — |
 
-### Issue reports
+### Сообщения об ошибках
 
-| Reporter | Report | Ref |
+| Автор | Сообщение | Ссылка |
 |---|---|---|
-| [@AAAwoshi](https://github.com/AAAwoshi) | Panel reloading wholesale on every active-editor switch: traced it to the redundant `render()` inside `refreshContextBar()` plus a regenerated nonce per render, with sampled log evidence, a minimal patch and post-patch measurements | #27 |
-| [@Joshuayang228](https://github.com/Joshuayang228) | File clicks not forwarded to the editor: pinpointed the CSS Module hashed class name and provided full reproduction evidence and a fix sketch | #22 |
-| [@lizhuoyuan41-droid](https://github.com/lizhuoyuan41-droid) | Bridge package written into DSH Desktop's private command directory, breaking desktop startup: root cause plus an allow-list suggestion | #20 |
-| [@Minelenbolan](https://github.com/Minelenbolan) | Duplicate bridge entry in `cordis.patch.yml` crashing the plugin tree | #19 |
-| [@HafenYin](https://github.com/HafenYin) | Windows cold start exceeding the hard-coded 15 s timeout (with full startup log) | #23 |
-| [@NOIPJohnny](https://github.com/NOIPJohnny) | DSH unable to reach the model API behind a proxy; suggested injecting child-process environment variables | #18 |
-| [@ThinBuffalo](https://github.com/ThinBuffalo) | Request for zoom control of the embedded page | #8 |
-| [@smallshieh](https://github.com/smallshieh) | Request for editor context injection (send the active file/selection with a message) | #10 |
-| [@Tsechiyuan](https://github.com/Tsechiyuan) | Request to send the current selection straight into the conversation | #7 |
-| [@sseryling](https://github.com/sseryling) | WSL Remote blank panel and bridge handshake failure: provided measured fixes | #13 |
-| [@Zanford](https://github.com/Zanford) | DSH failing to start from VS Code | #12 |
+| [@AAAwoshi](https://github.com/AAAwoshi) | Перезагрузка панели при переключении редактора: выявлена лишняя перерисовка и смена nonce, представлены измерения и исправление | #27 |
+| [@Joshuayang228](https://github.com/Joshuayang228) | Переходы по файлам не открывали редактор: найдена причина в хешированном CSS-классе и предложено исправление | #22 |
+| [@lizhuoyuan41-droid](https://github.com/lizhuoyuan41-droid) | Bridge попадал во внутренний каталог команд DSH Desktop и мешал запуску; предложен allow-list | #20 |
+| [@Minelenbolan](https://github.com/Minelenbolan) | Дублирующая запись bridge в `cordis.patch.yml` приводила к сбою дерева плагинов | #19 |
+| [@HafenYin](https://github.com/HafenYin) | Холодный запуск Windows превышал тайм-аут 15 секунд; приложен журнал запуска | #23 |
+| [@NOIPJohnny](https://github.com/NOIPJohnny) | DSH не мог обращаться к API модели через прокси; предложены переменные среды дочернего процесса | #18 |
+| [@ThinBuffalo](https://github.com/ThinBuffalo) | Запрос управления масштабом встроенной страницы | #8 |
+| [@smallshieh](https://github.com/smallshieh) | Запрос передачи контекста редактора (активный файл/выделение) | #10 |
+| [@Tsechiyuan](https://github.com/Tsechiyuan) | Запрос отправки выделенного фрагмента в беседу | #7 |
+| [@sseryling](https://github.com/sseryling) | Пустая панель WSL Remote и сбой handshake; предоставлены измерения для исправления | #13 |
+| [@Zanford](https://github.com/Zanford) | DSH не запускался из VS Code | #12 |
 
 ### Upstream
 
-- The narrow-viewport CJK caret issue (#9) was traced to the DSH frontend composer (the older "visible glyph backdrop + transparent textarea" dual-metric implementation). Upstream has since rewritten it as a Lexical editor, so the issue was closed with that conclusion.
+Проблема курсора CJK в узкой панели (#9) была отнесена к редактору DSH. В upstream он был заменён редактором Lexical, после чего issue закрыли с этим выводом.
 
-## 📄 License
+## 📄 Лицензия
 
 [MIT](./LICENSE) © 2026 Fengze233

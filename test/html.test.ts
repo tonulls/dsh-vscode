@@ -165,10 +165,13 @@ test('authRequiredPage 需要登录引导页：说明 + 输入框 + 提交经 po
   assert.ok(!html.includes('<iframe'), '登录页不应包含 DSH iframe 元素');
 });
 
-test('authRequiredPage 英文文案不缺失（en/zh 双语齐全）', () => {
+test('authRequiredPage 文案支持英语、中文和俄语', () => {
   initI18n('en');
   const html = authRequiredPage(t, ctx());
   assert.ok(html.includes('DSH requires browser sign-in'));
+  initI18n('ru-RU');
+  const russianHtml = authRequiredPage(t, ctx());
+  assert.ok(russianHtml.includes('Для DSH требуется вход через браузер'));
   initI18n('zh-cn');
 });
 
