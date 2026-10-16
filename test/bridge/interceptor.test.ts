@@ -171,11 +171,10 @@ test('打开相对文件时传递 DSH 会话 cwd；缺少上下文时省略 cwd'
     const b = loadBridge({ fetch: async () => jsonResponse({ ok: true }) });
     try {
       b.apply(context);
+      // Exercise a click before session.prompt has occurred: the bridge should
+      // still resolve the cwd from the active DSH session context.
       b.emitWin('message', { kind: 'bridgeHello', token: 'tok' });
-      await b.window.fetch('/rpc', {
-        method: 'POST',
-        body: JSON.stringify({ method: 'session.prompt', payload: { sessionId: 'session-1', content: [] } }),
-      });
+      b.window.__dshActiveSessionId = 'session-1';
       const button = {
         getAttribute: (name: string) => name === 'title' ? '_pasted_image.png' : null,
         matches: () => false,

@@ -3,6 +3,7 @@
 import { spawn, type SpawnOptions } from 'node:child_process';
 import { existsSync, realpathSync } from 'node:fs';
 import { win32 as win32Path, dirname, join } from 'node:path';
+import { resolveLaunch, binJsFromShim as launcherBinJsFromShim, type LaunchResolution, type LaunchSource } from './launcher';
 
 /** 最小子进程接口（真实 ChildProcess 结构上兼容，测试可注入假实现） */
 export interface ChildProcessLike {
@@ -17,8 +18,13 @@ export interface ChildProcessLike {
 /** spawn 函数签名（便于注入假实现） */
 export type SpawnFn = (command: string, args: string[], options: SpawnOptions) => ChildProcessLike;
 
+/** 结束进程树（仅 Windows 用；默认实现调 taskkill，单测注入假实现） */
+export type KillTreeFn = (pid: number) => void;
+
 /** 启动参数 */
 export interface StartOptions {
+  /** DSH profile 名称（默认 web） */
+  profile?: string;
   host: string;
   port: number;
   extraArgs: string[];
@@ -30,6 +36,10 @@ export interface StartOptions {
   openInBrowser?: boolean;
   /** 额外注入子进程的环境变量（issue #18；未配置则完全继承父进程环境） */
   env?: Record<string, string>;
+  /** 首选启动来源（dsh.launchPreference：auto/npm/desktop；缺省视作 auto） */
+  launchPreference?: string;
+  /** 桌面端命令绝对路径（dsh.desktopCommandPath；空串 = 自动探测） */
+  desktopCommandPath?: string;
 }
 
 /**
@@ -41,7 +51,7 @@ export interface RunnerEnv {
   execPath?: string;
   /** 环境变量 PATH 字符串值（生产为 process.env.PATH） */
   path?: string;
-  /** Windows 用户本地应用目录（用于发现 DSH Desktop 安装） */
+  /** Windows 的 LOCALAPPDATA（用于探测 DSH Desktop 的默认命令位置） */
   localAppData?: string;
   /** Electron 运行时版本（仅 Electron 环境有值；真实 Node 下为 undefined）。
    *  扩展宿主是 Electron，process.execPath 指向 Code.exe，绝不能当作 node 使用。 */
@@ -106,87 +116,39 @@ export function findInPath(
 }
 
 /**
- * Найти shim DSH Desktop в стандартном пользовательском каталоге Windows.
- * Каталог Desktop не добавляется в targets установки bridge: его runtime принадлежит приложению.
- */
-export function findDshDesktopShim(
-  localAppData: string | undefined,
-  existsImpl: (p: string) => boolean = existsSync,
-): string | null {
-  if (!localAppData) return null;
-  const candidate = win32Path.join(
-    localAppData, 'Programs', 'DeepSeek Harness', 'resources', 'runtime', 'cli', 'bin', 'dsh.cmd',
-  );
-  return existsImpl(candidate) ? candidate : null;
-}
-
-/**
- * 由 dsh.cmd 的绝对路径推导 npm shim 的真实入口 bin.js 路径.
+ * 由 dsh.cmd 的绝对路径推导 npm shim 的真实入口 bin.js 路径。
  *
  * npm 在 Windows 上生成的 shim（如 `dsh.cmd`）实际是把调用转发到同目录下的
- * `node_modules/<scope>/<pkg>/lib/bin.js`。本函数把 shim 所在目录替换为该真实入口
- * 的绝对路径，供后续"用 node 直接执行 bin.js"启动服务时使用。
+ * `node_modules/<scope>/<pkg>/lib/bin.js`。实现已迁到 launcher（裁决模块）：
+ * 那里会先推导、再校验该文件是否真实存在，避免拼出不存在的入口（issue #30）。
+ * 本处保留同名导出，既有调用方与测试无需改动。
  *
  * @param dshCmdPath dsh.cmd 的绝对路径（或 shim 所在任意文件路径，取 dirname）
  * @returns 推导出的 bin.js 绝对路径
  */
-export function binJsFromShim(dshCmdPath: string): string {
-  // 用 path.win32：shim 是 Windows 路径，须始终以反斜杠拼接（与运行平台无关）
-  return win32Path.join(win32Path.dirname(dshCmdPath), 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
-}
+export const binJsFromShim = launcherBinJsFromShim;
 
-/** Windows 下的启动方式：npm 使用系统 Node 跑 bin.js，Desktop 直接运行其 CLI exe。 */
+/** Windows 下"node 直跑 bin.js"的启动参数 */
 export interface WindowsDshInvocation {
-  /** spawn 命令；nodeBased=true 时此字段由系统 Node 路径覆盖 */
+  /** 实际 spawn 的命令（node 可执行文件绝对路径） */
   command: string;
-  /** 放在 web 参数前的入口参数；Desktop exe 不需要前缀 */
+  /** 需排在 '--profile ...' 之前的参数前缀（即 bin.js 绝对路径） */
   argsPrefix: string[];
-  /** 是否通过系统 Node 执行 argsPrefix 中的 JS 入口 */
-  nodeBased: boolean;
 }
 
 /**
- * 识别 DSH Desktop 自带 shim 对应的应用 exe。仅接受 Desktop 的已知 runtime 路径，
- * 避免把任意 dsh.cmd 上溯四级误判为 Desktop。不存在则返回 null。
+ * 构造 Windows 下"node 直跑 bin.js"的启动参数。
+ *
+ * 背景：Windows 上 `spawn('dsh.cmd')` 会因 .cmd 是批处理 shim 而在 Node v24 下同步抛
+ * EINVAL，改用 `node <bin.js>` 直跑真实入口即可绕过。本函数返回 { command: execPath,
+ * argsPrefix: [binJsPath] }，调用方将其作为 spawn(command, [...argsPrefix, '--profile', ...])。
+ *
+ * @param dshCmdPath dsh.cmd（或直接 bin.js）的绝对路径；bin.js 路径由其 dirname 推导
+ * @param execPath   node 可执行文件绝对路径（生产为 process.execPath）
+ * @returns Windows 下 node 直跑 bin.js 的启动参数
  */
-export function dshDesktopExeFromShim(
-  dshCmdPath: string,
-  existsImpl: (p: string) => boolean = existsSync,
-): string | null {
-  const normalized = win32Path.normalize(dshCmdPath).toLowerCase();
-  if (!normalized.endsWith('\\resources\\runtime\\cli\\bin\\dsh.cmd')) return null;
-  const candidate = win32Path.resolve(
-    win32Path.dirname(dshCmdPath), '..', '..', '..', '..', 'DeepSeek Harness.exe',
-  );
-  return existsImpl(candidate) ? candidate : null;
-}
-
-/**
- * 选择 Windows 启动方式。
- * npm shim 指向存在的 bin.js 时继续使用系统 Node（避免 spawn .cmd 的 EINVAL）；
- * DSH Desktop 的已知 shim layout 则直接启动其 DeepSeek Harness.exe；其他未知 layout
- * 返回可识别错误，避免把 MODULE_NOT_FOUND 误判为端口占用并不断换端口。
- */
-export function windowsDshInvocation(
-  dshCmdPath: string,
-  execPath: string,
-  existsImpl: (p: string) => boolean = existsSync,
-): WindowsDshInvocation {
-  if (dshCmdPath.toLowerCase().endsWith('.js')) {
-    return { command: execPath, argsPrefix: [dshCmdPath], nodeBased: true };
-  }
-  const npmEntry = binJsFromShim(dshCmdPath);
-  if (existsImpl(npmEntry)) {
-    return { command: execPath, argsPrefix: [npmEntry], nodeBased: true };
-  }
-  const desktopExe = dshDesktopExeFromShim(dshCmdPath, existsImpl);
-  if (desktopExe !== null) {
-    return { command: desktopExe, argsPrefix: [], nodeBased: false };
-  }
-  throw Object.assign(
-    new Error(`Could not resolve DSH entry for launcher ${dshCmdPath}`),
-    { code: 'DSH_ENTRY_NOT_FOUND' },
-  );
+export function windowsDshInvocation(dshCmdPath: string, execPath: string): WindowsDshInvocation {
+  return { command: execPath, argsPrefix: [binJsFromShim(dshCmdPath)] };
 }
 
 /**
@@ -257,7 +219,17 @@ export interface ProcessRunner {
   /** 最近一次启动的子进程（测试钩子；生产代码可忽略） */
   lastChild: ChildProcessLike | null;
   /** 最近一次启动的实际命令与参数（供 manager 写「启动命令」日志，便于问题排查） */
-  lastStart?: { command: string; args: string[] } | null;
+  lastStart?: {
+    command: string;
+    args: string[];
+    source?: LaunchSource;
+    /** 裁决理由（英文短句，便于日志对照；POSIX 分支为 undefined） */
+    launchReason?: string;
+    /** 依次尝试过的候选与失败原因（启动失败/回退时输出，便于远程排查） */
+    candidateLog?: string[];
+    /** 命中的 DSH Desktop 安装根（仅 desktop 来源；供版本探测） */
+    desktopRoot?: string;
+  } | null;
 }
 
 /**
@@ -268,24 +240,37 @@ export interface ProcessRunner {
  * @param existsImpl 存在性校验（默认 node:fs.existsSync；单测注入假实现以便控制 cwd / bin.js 查找结果）
  * @param env       运行环境注入（execPath / path；默认 process.execPath / process.env.PATH，工厂内取，保持既有调用不破）
  */
+/** 默认的进程树结束实现：Windows 上 taskkill /T /F（同步执行，失败由调用方吞掉） */
+function defaultKillTree(pid: number): void {
+  // 延迟 require：非 Windows 平台不会走到这里
+  const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+  spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+}
+
 export function createProcessRunner(
   spawnImpl: SpawnFn = spawn as unknown as SpawnFn,
   platform: string = process.platform,
   graceMs = 3000,
   existsImpl: (p: string) => boolean = existsSync,
-  env: RunnerEnv = {
-    execPath: process.execPath,
-    path: process.env.PATH ?? '',
-    localAppData: process.env.LOCALAPPDATA,
-  },
+  env: RunnerEnv = { execPath: process.execPath, path: process.env.PATH ?? '' },
+  killTree: KillTreeFn = defaultKillTree,
 ): ProcessRunner {
   let lastChild: ChildProcessLike | null = null;
-  let lastStart: { command: string; args: string[] } | null = null;
+  let lastStart: {
+    command: string;
+    args: string[];
+    source?: LaunchSource;
+    launchReason?: string;
+    candidateLog?: string[];
+    desktopRoot?: string;
+  } | null = null;
+  /** 最近一次启动是否走 cmd 外壳（决定停止时是否需要按进程树结束） */
+  let usedCmdScript = false;
 
   return {
-    startDsh({ host, port, extraArgs, cwd, executablePath, openInBrowser, env: extraEnv }) {
-      // 基础参数（web 子命令 + host/port + 用户额外参数），两种平台共用
-      const webArgs = ['web', '--host', host, '--port', String(port), ...extraArgs];
+    startDsh({ profile = 'web', host, port, extraArgs, cwd, executablePath, openInBrowser, env: extraEnv, launchPreference, desktopCommandPath }) {
+      // 基础参数（所选 profile + host/port + 用户额外参数），两种平台共用
+      const webArgs = ['--profile', profile, '--host', host, '--port', String(port), ...extraArgs];
       // 默认不让 dsh 弹浏览器（嵌入面板场景无需浏览器）：除非用户打开 openInBrowser 开关
       if (openInBrowser !== true) webArgs.push('--no-open');
       // 工作目录容错：过滤掉 Windows 上的 UNC / 不存在 / 相对路径，避免 spawn 抛 EINVAL
@@ -307,30 +292,52 @@ export function createProcessRunner(
       let child: ChildProcessLike;
       let command: string;
       let spawnArgs: string[];
+      // 本次启动实际采用的来源（Windows 分支由 launcher 裁决；POSIX 分支恒为 undefined）
+      let usedSource: LaunchSource | undefined;
+      let usedReason: string | undefined;
+      let usedCandidates: string[] | undefined;
+      let usedDesktopRoot: string | undefined;
       if (platform === 'win32') {
-        // Windows：npm .cmd нельзя напрямую spawn-ить в Node 24, поэтому проверяем npm bin.js
-        // и запускаем его системным Node. DSH Desktop использует собственный CLI exe.
-        const pathEnv = env.path ?? process.env.PATH ?? '';
-
-        // 1) Явный путь имеет приоритет; иначе PATH, затем стандартная установка DSH Desktop.
-        let shimPath: string | null;
-        if (executablePath && executablePath.length > 0) {
-          shimPath = executablePath;
-        } else {
-          shimPath = findInPath('dsh.cmd', pathEnv, existsImpl)
-            ?? findDshDesktopShim(env.localAppData ?? process.env.LOCALAPPDATA, existsImpl);
-          if (shimPath === null) {
-            throw Object.assign(new Error('dsh.cmd not found in PATH or standard DSH Desktop location'), { code: 'ENOENT' });
-          }
+        // Windows：.cmd 是批处理 shim，Node v24 直接 spawn 会同步抛 EINVAL，
+        // （cmd 模式的参数前缀由 launcher.cmdScriptArgs 生成：脚本路径需双层引号，否则空格处被截断）
+        // 因此由 launcher 裁决执行方式：能推导出真实 bin.js 就用 node 直跑，
+        // 推不出来（DSH Desktop 的 dsh.cmd）就用 cmd.exe 执行脚本本身。
+        const resolution: LaunchResolution | null = resolveLaunch({
+          platform,
+          env: {
+            path: env.path ?? process.env.PATH ?? '',
+            localAppData: env.localAppData ?? process.env.LOCALAPPDATA,
+          },
+          exists: existsImpl,
+          preference: launchPreference,
+          desktopCommandPath,
+          explicitPath: executablePath,
+        });
+        if (resolution === null) {
+          // npm 与桌面端都不可用 → 保持"未找到 dsh"语义（manager 的 ENOENT 分支照常工作）
+          throw Object.assign(
+            new Error('dsh not found (npm dsh.cmd and DSH Desktop command both unavailable)'),
+            { code: 'ENOENT' },
+          );
         }
-
-        // 2) npm layout → node bin.js; DSH Desktop layout → приложение напрямую.
-        const invocation = windowsDshInvocation(shimPath, env.execPath ?? process.execPath, existsImpl);
-        command = invocation.nodeBased
-          ? resolveWindowsNodeExecutable(shimPath, env, existsImpl)
-          : invocation.command;
-        spawnArgs = [...invocation.argsPrefix, ...webArgs];
-        child = spawnImpl(command, spawnArgs, spawnOptions);
+        // node 模式必须解析系统 PATH 里的 node.exe（Electron 环境的 execPath 是 Code.exe，不可用）
+        command = resolution.mode === 'node'
+          ? resolveWindowsNodeExecutable(resolution.executablePath, env, existsImpl)
+          : 'cmd.exe';
+        spawnArgs = [...resolution.argsPrefix, ...webArgs];
+        usedSource = resolution.source;
+        usedReason = resolution.reason;
+        usedCandidates = resolution.candidateLog;
+        usedDesktopRoot = resolution.desktopRoot;
+        // 记录执行方式：cmd 模式下真正跑 dsh 的是 cmd.exe 的子进程，
+        // 停止时必须按进程树结束，否则会留下孤儿进程占着端口（见 stopChild）。
+        usedCmdScript = resolution.mode === 'cmd';
+        // verbatim：脚本路径已在 argsPrefix 里用引号包裹，必须让 Node 原样传命令行，
+        // 否则 Node 会再转义一层引号，cmd 收到字面引号 → 「文件名、目录名或卷标语法不正确」。
+        const spawnOptionsForLaunch = resolution.verbatimCommandLine === true
+          ? { ...spawnOptions, windowsVerbatimArguments: true }
+          : spawnOptions;
+        child = spawnImpl(command, spawnArgs, spawnOptionsForLaunch);
       } else {
         // 非 Windows 分支完全不变：仍 spawn 'dsh'（或显式 executablePath）
         command = executablePath && executablePath.length > 0 ? executablePath : 'dsh';
@@ -339,12 +346,25 @@ export function createProcessRunner(
       }
 
       lastChild = child;
-      lastStart = { command, args: spawnArgs };
+      lastStart = {
+        command, args: spawnArgs, source: usedSource,
+        launchReason: usedReason, candidateLog: usedCandidates, desktopRoot: usedDesktopRoot,
+      };
       return child;
     },
 
     async stopChild(child) {
       if (child.pid === undefined) return;
+      // Windows + cmd 模式：cmd.exe 只是外壳，真正跑 dsh 的是它的子进程。
+      // 只 kill 外壳会留下孤儿 dsh（端口不释放、下次启动探到「端口被占用」），
+      // 因此用 taskkill /T 结束整棵树，再做一次常规 kill 兜底。
+      if (platform === 'win32' && usedCmdScript) {
+        try {
+          killTree(child.pid);
+        } catch {
+          /* taskkill 不可用（被裁剪的系统/权限不足）：继续走下方常规 kill */
+        }
+      }
       child.kill('SIGTERM');
       await new Promise((resolve) => setTimeout(resolve, graceMs));
       child.kill('SIGKILL');

@@ -1,8 +1,12 @@
 // test/package.test.ts — package.json 静态贡献与设置的回归校验（v0.3.0）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { installBridge, createNodeFs } from '../src/bridge/installer';
+import { PROFILE_NAME_PATTERN } from '../src/config';
 
 function pkg() {
   return JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'));
@@ -38,6 +42,19 @@ test('存在手动清理图片缓存命令 dsh.cleanupImageCache', () => {
   assert.ok(Array.isArray(p.activationEvents) && p.activationEvents.includes('onCommand:dsh.cleanupImageCache'), '需声明激活事件');
 });
 
+test('扩展设置命令同时出现在命令面板和 DSH 面板标题栏', () => {
+  const p = pkg();
+  const command = p.contributes.commands.find((c: { command: string }) => c.command === 'dsh.openSettings');
+  assert.ok(command, '存在 dsh.openSettings 命令');
+  assert.equal(command.title, '%dsh.cmd.openSettings.title%');
+  assert.ok(p.activationEvents.includes('onCommand:dsh.openSettings'));
+  const item = (p.contributes.menus['view/title'] as { command: string; when?: string; group?: string }[])
+    .find((entry) => entry.command === 'dsh.openSettings');
+  assert.ok(item, 'DSH 面板标题栏包含设置命令');
+  assert.equal(item.when, 'view == dsh.panel || view == dsh.panel.secondary');
+  assert.equal(item.group, 'navigation@6');
+});
+
 test('活动栏/辅助侧边栏容器图标保持原始鲸鱼图标（assets/whale-icon.svg）', () => {
   const p = pkg();
   for (const container of [...p.contributes.viewsContainers.activitybar, ...p.contributes.viewsContainers.secondarySidebar]) {
@@ -52,6 +69,17 @@ test('v0.3.0 设置项：remote.enabled 默认 false、image.fallback 默认 tru
   assert.equal(props['dsh.remote.enabled'].default, false);
   assert.equal(props['dsh.image.fallback'].default, true);
   assert.equal(props['dsh.openInBrowser'].default, false);
+  assert.equal(props['dsh.profile'].type, 'string');
+  assert.equal(props['dsh.profile'].default, 'web');
+  assert.equal(props['dsh.profile'].markdownDescription, '%dsh.config.profile%');
+  assert.equal(props['dsh.profile'].pattern, PROFILE_NAME_PATTERN.source);
+  assert.equal(props['dsh.launchPreference'].type, 'string');
+  assert.equal(props['dsh.launchPreference'].default, 'auto');
+  assert.deepEqual(props['dsh.launchPreference'].enum, ['auto', 'npm', 'desktop']);
+  assert.equal(props['dsh.launchPreference'].markdownDescription, '%dsh.config.launchPreference%');
+  assert.equal(props['dsh.desktopCommandPath'].type, 'string');
+  assert.equal(props['dsh.desktopCommandPath'].default, '');
+  assert.equal(props['dsh.desktopCommandPath'].markdownDescription, '%dsh.config.desktopCommandPath%');
 });
 
 test('桥接版本与插件版本统一（一同随包发布），且卸载钩子自动清理桥接', () => {
@@ -68,6 +96,39 @@ test('桥接版本与插件版本统一（一同随包发布），且卸载钩�
   assert.ok(client.includes('buildSyncWorkspaceAck(true, undefined, BRIDGE_VERSION)'), '握手回执应携带桥接版本');
   // ④ 构建产物应包含卸载脚本（build.mjs 在两种模式下都会构建 out/uninstall.js）
   assert.ok(existsSync(join(__dirname, '..', 'uninstall.js')), '构建产物应包含 out/uninstall.js');
+  // 仅使用 Node 的卸载钩子也必须清理自定义 profile，
+  // 没有本扩展桥接标记的 profile 保持原样。
+  const dshHome = mkdtempSync(join(tmpdir(), 'dsh-profile-uninstall-'));
+  try {
+    const fs = createNodeFs();
+    for (const profile of ['web', 'custom-profile']) {
+      mkdirSync(join(dshHome, 'profiles', profile), { recursive: true });
+      const result = installBridge({
+        dshHome, profile, fs, bridgeSourceDir: join(__dirname, '..', 'bridge-client'),
+      });
+      assert.equal(result.status, 'ok');
+    }
+    const otherPatch = join(dshHome, 'profiles', 'other', 'cordis.patch.yml');
+    mkdirSync(join(dshHome, 'profiles', 'other'), { recursive: true });
+    writeFileSync(otherPatch, '# user content\n[]\n');
+    // 子进程环境必须清掉测试运行器标记：node --test 会把 NODE_TEST_CONTEXT 传下去，
+    // 而卸载钩子据它拒绝执行（该守卫是为了防止单测误清理用户真实的 ~/.dsh）。
+    // 真实卸载场景（VS Code 执行 node out/uninstall.js）没有这个变量。
+    const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: dshHome, APPDATA: dshHome };
+    delete childEnv.NODE_TEST_CONTEXT;
+    const result = spawnSync(process.execPath, [join(__dirname, '..', 'uninstall.js')], {
+      env: childEnv, encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    for (const profile of ['web', 'custom-profile']) {
+      assert.equal(readFileSync(join(dshHome, 'profiles', profile, 'cordis.patch.yml'), 'utf8'), '[]\n');
+      assert.equal(existsSync(join(dshHome, 'profiles', profile, 'node_modules', 'dsh-vscode-bridge')), false);
+    }
+    assert.equal(existsSync(join(dshHome, 'profiles', 'node_modules', 'dsh-vscode-bridge')), false);
+    assert.equal(readFileSync(otherPatch, 'utf8'), '# user content\n[]\n');
+  } finally {
+    rmSync(dshHome, { recursive: true, force: true });
+  }
 });
 
 // ——— issue #27 回归防线（0.4.2 撤回 PR #11 后固化） ———
@@ -116,8 +177,9 @@ test('#27 回归：面板缩放仍接线且传参位置正确（0.4.2 保留 iss
 });
 
 // ——— 文档与测试数一致性 ———
-// README 与 Unreleased changelog 的测试数以源码 test( 静态计数为准；已发布版本的数字是历史记录。
-test('README и Unreleased CHANGELOG объявляют фактическое число тестов', () => {
+// README/CHANGELOG 里的测试数在发布流程中被反复手改（326 → 275 → 277 → 283），
+// README 与 CHANGELOG 未发布节按静态计数校验，已发布版本保留历史数字。
+test('README 中英与 CHANGELOG 未发布测试数等于实际测试数，历史数字保持一致', () => {
   const root = join(__dirname, '..', '..');
   // ① 静态计数：递归 test/ 下所有 *.test.ts 的顶层 test( 调用
   const stack = [join(root, 'test')];
@@ -135,21 +197,27 @@ test('README и Unreleased CHANGELOG объявляют фактическое �
   }
   assert.ok(count > 200, `静态计数应达到数百条，实际 ${count}`);
 
-  // ② README（中英）在 npm run test 的注释里声明了同一个数字
-  for (const file of ['README.md', join('docs', 'README.zh.md')]) {
+  // ② Detailed guides document the source test count; short READMEs stay user-focused.
+  for (const file of ['docs/user-guide.ru.md', 'docs/user-guide.en.md']) {
     const text = readFileSync(join(root, file), 'utf8');
-    const m = /npm run test\s+# (\d+) /.exec(text);
+    const m = /npm run test\s+#\s*(\d+)\s+(?:модульных\/интеграционных теста?|unit\/integration tests?)/i.exec(text);
     assert.ok(m, `${file} 应声明测试数`);
     assert.equal(Number(m[1]), count, `${file} 声明的测试数应与实际一致（实际 ${count}）`);
   }
 
-  // ③ Unreleased CHANGELOG отражает текущий запуск; выпущенные версии не переписываем задним числом.
+  // ③ CHANGELOG 未发布节记录当前测试数，避免为新增用例修改已发布版本。
   const changelog = readFileSync(join(root, 'docs', 'CHANGELOG.md'), 'utf8');
-  const unreleased = /## \[Unreleased\]([\s\S]*?)(?=\n## \[|$)/.exec(changelog)?.[1];
-  assert.ok(unreleased, 'CHANGELOG 应包含 Unreleased текущих изменений');
-  const russianSummary = /Автоматизированные проверки: (\d+) тест(?:ов|а) \((\d+) пройдено, (\d+) пропущено, (\d+) ошибок\)/i.exec(unreleased);
-  assert.ok(russianSummary, 'Unreleased 应用俄语说明测试总数、通过、跳过和失败数');
-  assert.equal(Number(russianSummary[1]), count, 'Unreleased 的测试总数应与源码一致');
-  assert.equal(Number(russianSummary[2]) + Number(russianSummary[3]) + Number(russianSummary[4]), count, '测试统计应相加等于总数');
-  assert.equal(Number(russianSummary[4]), 0, 'Unreleased 测试失败数必须为 0');
+  const unreleased = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(changelog);
+  assert.ok(unreleased, 'CHANGELOG 应包含未发布节');
+  const currentCount = /测试用例共 (\d+) 个/.exec(unreleased[1]);
+  assert.ok(currentCount, 'CHANGELOG 未发布节应写明当前测试数');
+  assert.equal(Number(currentCount[1]), count, 'CHANGELOG 未发布测试数应与实际一致');
+  // ④ 已发布 0.4.2 段落的 "npm test X/X 全绿" 与 "由 A 降至 X" 保持一致。
+  const green = /`npm test` (\d+)\/\1 全绿/.exec(changelog);
+  assert.ok(green, 'CHANGELOG 应写明 npm test 全绿的数量');
+  const dropped = /测试用例由 (\d+) 降至 (\d+)/.exec(changelog);
+  assert.ok(dropped, 'CHANGELOG 应写明测试数的变化');
+  // 历史版本的测试数不随新增用例变化，只验证同一版本段落内的数字一致。
+  assert.equal(Number(dropped[2]), Number(green[1]), 'CHANGELOG 同一版本的测试数应一致');
+  assert.ok(Number(dropped[1]) > Number(dropped[2]), '撤回后测试数应下降');
 });

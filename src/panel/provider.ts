@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto';
 import * as nodeFs from 'node:fs/promises';
 import { ServiceManager } from '../service/manager';
 import { handleBridgeMessage } from '../bridge/host';
-import { openFileWithDefaultEditor } from '../bridge/open';
 import { classifyRemote, toLocalhostUrl, type RemoteKind } from '../remote';
 import { t } from '../i18n';
 import {
@@ -176,9 +175,12 @@ export class DshPanelProvider implements vscode.WebviewViewProvider {
   private bridgeDeps(): Parameters<typeof handleBridgeMessage>[1] {
     return {
       openExternal: (u) => vscode.env.openExternal(vscode.Uri.parse(u)),
-      // vscode.open 按文件类型选择编辑器（如图片/PDF preview），await 后丢弃命令返回值。
-      openFile: async (p) => {
-        await openFileWithDefaultEditor(vscode, p);
+      // 用 vscode.open 而不是 window.showTextDocument：后者只能开文本编辑器，
+      // 点图片/PDF 会抛「File seems to be binary and cannot be opened as text」（issue #33）。
+      // vscode.open 由 VS Code 自选编辑器：文本→文本编辑器、图片→图片预览、PDF→内建 PDF 预览、
+      // 未知二进制→占位页（提示而非报错）。依赖契约仍为 Thenable<void>，故不返回其执行结果。
+      openFile: async (p: string) => {
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(p), { preview: false });
       },
       // 用户提示统一走 vscode.window.showWarningMessage（host 层不 import vscode，保持纯逻辑可单测）
       showWarning: (m) => void vscode.window.showWarningMessage(m),

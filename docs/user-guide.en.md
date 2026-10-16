@@ -188,12 +188,18 @@ Requirements: Node.js ≥ 22, VS Code ≥ 1.91.
 
 ```bash
 npm install
-npm run test          # 297 unit/integration tests (including real dsh web flows: service lifecycle, auth session)
+npm run test          # 323 unit/integration tests
 npm run compile       # builds out/extension.js
 npm run watch         # watch build
 npm run typecheck     # type check
 npm run package       # package .vsix
 ```
+
+### DSH profile and launcher
+
+Version 0.4.3 adds `dsh.profile` (default: `web`) and `dsh.launchPreference`. The `auto` option prefers an npm installation and then falls back to DSH Desktop; choose `npm` or `desktop` to force a source. On Windows, configure the Desktop command with `dsh.desktopCommandPath` if automatic discovery does not find it. The bridge is installed into the profile selected for the DSH service.
+
+File paths from a session are resolved against that session's working directory when DSH exposes it, with the VS Code workspace as fallback. Binary files are supported.
 
 Debugging: open this folder in VS Code and press `F5` to launch the Extension Development Host.
 

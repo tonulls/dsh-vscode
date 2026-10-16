@@ -8,6 +8,7 @@ scripts/**
 docs/superpowers/**
 docs/**/*.md
 out/test/**
+out/**/*.map
 # 桥接客户端源码为模板（client.js 含占位符），打包只发构建产物 out/bridge-client/
 bridge-client/**
 **/*.map
@@ -27,3 +28,10 @@ dsh-imgcache-*
 .npm-cache/**
 .code-atlas/**
 .git/**
+# Personal edit history is local-only and must never ship in VSIX
+.History/**
+
+# Include generated runtime entrypoints even though .gitignore excludes out/
+!out/extension.js
+!out/uninstall.js
+!out/bridge-client/**

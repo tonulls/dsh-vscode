@@ -22,3 +22,6 @@ credentials.yaml
 dsh-imgcache-*
 .dsh-e2e-home/
 .dsh-auth-mock/
+
+# Local edit history must never be committed
+.History/

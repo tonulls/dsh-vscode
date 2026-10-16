@@ -35,8 +35,8 @@ const messages = {
     'msg.authMismatch': 'The URL points to {urlHost}, but the running DSH service is at {targetHost}. Copy the URL from the log of this DSH service.',
     // 错误原因（error 字段存的 i18n 键）
     'err.portOccupied': 'Port {port} is occupied by another program. Change dsh.port in settings, then retry.',
-    'err.dshNotFound': 'The dsh command was not found. Install DeepSeek Harness first.',
-    'err.dshEntryNotFound': 'The dsh launcher was found, but its runtime entry could not be located. Repair DSH Desktop or set dsh.executablePath to a valid bin.js entry.',
+    'err.dshNotFound': 'No usable dsh was found. Install it with npm (`npm i -g @deepseek-ai/dsh`), or install DSH Desktop and click "Add Desktop command to terminal" there; you can also set dsh.executablePath / dsh.desktopCommandPath explicitly.',
+    'err.dshEntryNotFound': 'The DSH command was found, but its runtime entry could not be resolved. Check the selected launch source and dsh.desktopCommandPath, then review the DSH log.',
     'err.nodeNotFound': 'Node.js (node.exe) was not found in PATH. Install Node.js or add it to PATH, then restart VS Code.',
     'err.spawnEinval': 'Failed to start dsh: invalid spawn parameters (working directory: {cwd}). Try opening a local folder, or set dsh.executablePath in settings.',
     'err.startTimeout': 'Service did not become ready within {seconds}s. See the DSH log for details.',
@@ -99,8 +99,8 @@ const messages = {
     'msg.authOk': 'DSH 登录成功，会话最长 30 天有效。',
     'msg.authMismatch': '网址指向 {urlHost}，但正在运行的 DSH 服务在 {targetHost}。请从该服务的日志中复制网址。',
     'err.portOccupied': '端口 {port} 被其他程序占用。请在设置中修改 dsh.port 后重试。',
-    'err.dshNotFound': '未找到 dsh 命令，请先安装 DeepSeek Harness。',
-    'err.dshEntryNotFound': '已找到 dsh 启动器，但未找到可运行的入口。请修复 DSH Desktop，或将 dsh.executablePath 设置为有效的 bin.js 路径。',
+    'err.dshNotFound': '未找到可用的 dsh。请用 npm 安装（`npm i -g @deepseek-ai/dsh`），或安装 DSH Desktop 并在其中点击「将 Desktop 命令添加到终端」；也可以在设置里显式指定 dsh.executablePath / dsh.desktopCommandPath。',
+    'err.dshEntryNotFound': '已找到 DSH 命令，但无法定位其运行入口。请检查启动来源和 dsh.desktopCommandPath，并查看 DSH 日志。',
     'err.nodeNotFound': 'PATH 中未找到 Node.js（node.exe）。请安装 Node.js 或将其加入 PATH 后重启 VS Code。',
     'err.spawnEinval': 'dsh 启动失败：启动参数无效（工作目录：{cwd}）。请改用本地路径打开项目，或在设置中指定 dsh.executablePath。',
     'err.startTimeout': '服务在 {seconds} 秒内未就绪，详见 DSH 日志。',
@@ -132,52 +132,52 @@ const messages = {
   ru: {
     'panel.loading': 'Запуск службы DSH…',
     'panel.errorTitle': 'Не удалось запустить службу DSH',
-    'panel.disconnectedTitle': 'Соединение со службой DSH потеряно',
-    'panel.reconnect': 'Подключиться снова',
+    'panel.disconnectedTitle': 'Связь со службой DSH потеряна',
+    'panel.reconnect': 'Подключиться',
     'panel.retry': 'Повторить',
     'panel.openExternal': 'Открыть в браузере',
-    'panel.remoteDisabled': 'Поддержка SSH Remote отключена. Включите параметр «dsh.remote.enabled» и перезагрузите окно.',
+    'panel.remoteDisabled': 'Поддержка SSH Remote отключена. Включите «dsh.remote.enabled» в настройках и перезагрузите окно.',
     'panel.openSettings': 'Открыть настройки',
     'panel.restart': 'Перезапустить службу',
     'panel.stop': 'Остановить службу',
-    'panel.copyUrl': 'Копировать URL',
+    'panel.copyUrl': 'Скопировать URL',
     'panel.showLogs': 'Показать журнал',
     'panel.authTitle': 'Для DSH требуется вход через браузер',
-    'panel.authExplain': 'Эта служба DSH запущена не расширением, поэтому оно не может автоматически получить URL запуска. Вставьте URL, который команда dsh web вывела при запуске, чтобы один раз войти в систему (сеанс действует 30 дней).',
-    'panel.authStep1': 'В журнале службы DSH найдите строку, начинающуюся с «dsh web: http://…/?token=…» (вывод терминала; для systemd выполните journalctl -u dsh -n 100).',
-    'panel.authStep2': 'Вставьте полный URL ниже и нажмите «Войти».',
+    'panel.authExplain': 'Эту службу DSH запустили не из расширения, поэтому оно не может автоматически получить ссылку запуска. Вставьте ссылку, которую команда dsh web вывела при запуске, чтобы один раз войти в систему (сеанс действует 30 дней).',
+    'panel.authStep1': 'Найдите в журнале DSH строку «dsh web: http://…/?token=…» (вывод терминала; для systemd выполните «journalctl -u dsh -n 100»).',
+    'panel.authStep2': 'Вставьте ссылку целиком и нажмите «Войти».',
     'panel.authPlaceholder': 'dsh web: http://127.0.0.1:3080/?token=…',
-    'panel.authHint': 'URL используется один раз для получения сеанса и нигде не сохраняется.',
+    'panel.authHint': 'Ссылка используется один раз для получения сеанса и не сохраняется.',
     'panel.authSubmit': 'Войти',
     'panel.authSubmitting': 'Выполняется вход…',
-    'msg.authBadUrl': 'Похоже, это не URL запуска dsh web (ожидается: dsh web: http://127.0.0.1:<порт>/?token=…). Скопируйте его из журнала службы DSH.',
-    'msg.authNeedToken': 'Для этой службы DSH требуется вход через браузер, но в указанном адресе нет одноразового токена. Вставьте полный URL запуска из журнала (строку, начинающуюся с «dsh web: http://…/?token=…»).',
+    'msg.authBadUrl': 'Это не похоже на ссылку запуска dsh web (ожидается dsh web: http://127.0.0.1:<порт>/?token=…). Скопируйте её из журнала DSH.',
+    'msg.authNeedToken': 'Для этой службы DSH нужен вход через браузер, но в указанной ссылке нет одноразового токена. Вставьте полную ссылку запуска из журнала.',
     'msg.authRejected': 'Не удалось войти: {reason}',
     'msg.authOk': 'Вход в DSH выполнен. Сеанс действует до 30 дней.',
-    'msg.authMismatch': 'URL указывает на {urlHost}, а запущенная служба DSH находится на {targetHost}. Скопируйте URL из журнала этой службы.',
-    'err.portOccupied': 'Порт {port} занят другой программой. Измените параметр dsh.port в настройках и повторите попытку.',
-    'err.dshNotFound': 'Команда dsh не найдена. Сначала установите DeepSeek Harness.',
-    'err.dshEntryNotFound': 'Запускатель dsh найден, но его исполняемый модуль не обнаружен. Восстановите DSH Desktop или укажите корректный путь bin.js в dsh.executablePath.',
-    'err.nodeNotFound': 'Node.js (node.exe) не найден в PATH. Установите Node.js или добавьте его в PATH, затем перезапустите VS Code.',
-    'err.spawnEinval': 'Не удалось запустить dsh: неверные параметры запуска (рабочий каталог: {cwd}). Откройте локальную папку или задайте dsh.executablePath в настройках.',
-    'err.startTimeout': 'Служба не запустилась за {seconds} с. Подробности — в журнале DSH.',
-    'err.startCrashed': 'Служба DSH неожиданно завершилась. Подробности — в журнале DSH.',
+    'msg.authMismatch': 'Ссылка указывает на {urlHost}, а служба DSH запущена на {targetHost}. Скопируйте ссылку из журнала этой службы.',
+    'err.portOccupied': 'Порт {port} занят другой программой. Измените dsh.port в настройках и повторите попытку.',
+    'err.dshNotFound': 'Не удалось найти dsh. Установите его командой npm («npm i -g @deepseek-ai/dsh») или установите DSH Desktop и добавьте его команду в терминал. Также можно явно указать dsh.executablePath или dsh.desktopCommandPath.',
+    'err.dshEntryNotFound': 'Команда DSH найдена, но не удалось определить точку входа. Проверьте источник запуска и dsh.desktopCommandPath, затем изучите журнал DSH.',
+    'err.nodeNotFound': 'В PATH не найден Node.js (node.exe). Установите Node.js или добавьте его в PATH, затем перезапустите VS Code.',
+    'err.spawnEinval': 'Не удалось запустить dsh: неверные параметры запуска (рабочий каталог: {cwd}). Откройте локальную папку или укажите dsh.executablePath в настройках.',
+    'err.startTimeout': 'Служба не запустилась за {seconds} с. Подробности есть в журнале DSH.',
+    'err.startCrashed': 'Служба DSH неожиданно завершилась. Подробности есть в журнале DSH.',
     'err.notRunning': 'Служба DSH не запущена, а автоматический запуск отключён.',
     'err.loadFailed': 'Не удалось загрузить страницу DSH.',
     'status.running': 'DSH: работает',
     'status.starting': 'DSH: запускается',
     'status.failed': 'DSH: ошибка',
     'status.stopped': 'DSH: остановлена',
-    'guide.secondaryTitle': 'DSH: два способа открыть панель',
-    'guide.secondaryText': 'Панель DSH доступна по значкам на панели действий и во вспомогательной боковой панели. Нажмите любой из них.',
+    'guide.secondaryTitle': 'DSH: две боковые панели',
+    'guide.secondaryText': 'Панель DSH можно открыть значком на основной или дополнительной боковой панели. Нажмите любой из них.',
     'guide.gotIt': 'Понятно',
     'info.urlCopied': 'URL скопирован: {url}',
     'info.notReady': 'Служба DSH ещё не готова.',
     'info.stopped': 'Служба DSH остановлена.',
-    'msg.portFallback': 'Порт {port} занят другой программой. Для этого сеанса временно используется порт {fallback} (параметр dsh.port не изменён).',
+    'msg.portFallback': 'Порт {port} занят другой программой. Для этого сеанса временно используется порт {fallback} (настройка dsh.port не изменена).',
     'msg.logsCopied': 'Журнал DSH скопирован в буфер обмена. Вставьте его в отчёт об ошибке.',
-    'msg.imageCacheCleaned': 'Удалено временных файлов резервной отправки изображений: {count}.',
-    'bridge.warnDegraded': 'Мост DSH не активен. Недоступны функции: 1) открытие ссылок в браузере; 2) открытие путей к файлам в VS Code. Можно повторить установку моста или отключить это предупреждение.',
+    'msg.imageCacheCleaned': 'Удалено временных файлов изображений: {count}.',
+    'bridge.warnDegraded': 'Мост DSH не активен. Недоступны переходы по ссылкам в браузер и открытие путей к файлам в VS Code. Можно повторить установку моста или отключить это предупреждение.',
     'bridge.retryNow': 'Повторить установку',
     'bridge.neverAgain': 'Больше не показывать',
     'bridge.uninstalled': 'Мост DSH удалён. Перезапустите службу DSH, чтобы изменения вступили в силу.',
@@ -188,16 +188,16 @@ const messages = {
 /** 文案键联合类型（en 为键的来源） */
 export type MsgKey = keyof typeof messages.en;
 
-let current: 'zh' | 'ru' | 'en' = 'en';
+let current: 'zh' | 'en' | 'ru' = 'en';
 
 /** 按语言规则初始化（扩展激活时调用一次） */
 export function initI18n(language: string): void {
   const normalized = language.toLowerCase();
-  current = normalized.startsWith('ru') ? 'ru' : normalized.startsWith('zh') ? 'zh' : 'en';
+  current = normalized.startsWith('zh') ? 'zh' : normalized.startsWith('ru') ? 'ru' : 'en';
 }
 
 /** 当前语言 */
-export function getLang(): 'zh' | 'ru' | 'en' {
+export function getLang(): 'zh' | 'en' | 'ru' {
   return current;
 }
 
