@@ -214,7 +214,6 @@ DSH home 优先取 `dsh.env.DSH_HOME`，其次是扩展宿主的 `DSH_HOME`，�
 
 ```bash
 npm install
-npm run test          # 297 个单元/集成测试（含真实 dsh web 全流程：服务生命周期、鉴权会话）
 npm run compile       # 构建 out/extension.js
 npm run watch         # 监听构建
 npm run typecheck     # 类型检查

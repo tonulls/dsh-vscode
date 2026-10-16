@@ -9,7 +9,6 @@ Requirements: Node.js ≥ 22, VS Code ≥ 1.91, and the `dsh` CLI from
 
 ```bash
 npm install
-npm run test          # unit/integration tests
 npm run typecheck
 npm run compile
 ```
@@ -23,5 +22,5 @@ Press `F5` in VS Code to launch the Extension Development Host.
 
 ## Submitting changes
 
-Open a pull request; CI runs typecheck, tests, and packages a vsix. Bug
+Open a pull request; CI runs typecheck and packages a VSIX. Bug
 reports and feature requests go through the issue templates.

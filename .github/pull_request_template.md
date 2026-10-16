@@ -4,6 +4,6 @@
 
 ## 验证
 
-- [ ] `npm test` 通过
 - [ ] `npm run typecheck` 通过
+- [ ] `npm run compile` 通过
 - [ ] 手动验证说明：

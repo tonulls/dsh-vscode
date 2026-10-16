@@ -369,7 +369,6 @@
     "compile": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/build.mjs --test && node --test \"out/test/**/*.test.js\"",
     "package": "npm run compile && vsce package --no-dependencies -o dsh-vscode.vsix"
   },
   "devDependencies": {

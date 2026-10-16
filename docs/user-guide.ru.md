@@ -177,7 +177,6 @@ Bridge действует только во встроенной панели. �
 
 ```bash
 npm install
-npm run test          # 323 модульных/интеграционных теста
 npm run compile       # собирает out/extension.js
 npm run watch         # сборка при изменениях
 npm run typecheck     # проверка типов

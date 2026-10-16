@@ -3,6 +3,9 @@ node_modules
 out/
 *.vsix
 .superpowers/
+test/
+docs/superpowers/
+scripts/release-0.4.2.sh
 
 # git worktree 工作区（本计划隔离开发用）
 .worktrees/

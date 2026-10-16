@@ -188,7 +188,6 @@ Requirements: Node.js ≥ 22, VS Code ≥ 1.91.
 
 ```bash
 npm install
-npm run test          # 323 unit/integration tests
 npm run compile       # builds out/extension.js
 npm run watch         # watch build
 npm run typecheck     # type check
